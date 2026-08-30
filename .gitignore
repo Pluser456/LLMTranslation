@@ -1,0 +1,17 @@
+# ---- 构建产物 (dist 下除 web 前端源码外均为 build.bat 生成) ----
+dist/*
+!dist/web/
+
+# ---- 可执行文件 / 压缩包 / 符号 ----
+*.exe
+*.zip
+*.pdb
+
+# ---- 日志 / 调试输出 / 截图 ----
+*.log
+*.txt
+*.png
+
+# ---- 系统杂项 ----
+Thumbs.db
+Desktop.ini

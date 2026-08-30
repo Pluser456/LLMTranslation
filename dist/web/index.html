@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="katex.min.css">
+<script src="marked.min.js"></script>
+<script src="katex.min.js"></script>
+<style>
+  :root{
+    --bg:#fff; --muted:#f5f5f5; --hover:#f0f0f0; --border:#e8e8e8;
+    --fg:#262626; --muted-fg:#737373; --accent:#4a7dd6;
+  }
+  *{ box-sizing:border-box; -webkit-user-select:none; user-select:none; }
+  html,body{ height:100%; margin:0; background:var(--bg); }
+  body{ font-family:'Segoe UI','Microsoft YaHei UI',sans-serif; color:var(--fg); display:flex; flex-direction:column; overflow:hidden; }
+  .allow{ -webkit-user-select:text; user-select:text; }
+
+  /* 顶部拖拽条 + 窗口按钮 */
+  #titlebar{ height:38px; flex:0 0 38px; display:flex; align-items:center; padding:0 8px 0 12px; }
+  #drag{ position:absolute; left:0; top:0; right:110px; height:38px; }
+  .brand{ display:flex; align-items:center; gap:6px; z-index:1; pointer-events:none; }
+  .brand .logo{ color:var(--accent); font-weight:700; font-size:13px; }
+  .brand .t{ font-weight:600; font-size:13px; color:var(--fg); }
+  .winbtns{ margin-left:auto; display:flex; gap:2px; z-index:1; }
+  .wbtn{ width:30px; height:28px; border:none; background:transparent; border-radius:6px; color:var(--muted-fg);
+         display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .wbtn:hover{ background:var(--muted); }
+  .wbtn.on{ background:var(--hover); color:var(--fg); }
+  .wbtn svg{ width:14px; height:14px; }
+
+  /* 语言条 */
+  #bar{ flex:0 0 auto; display:flex; align-items:center; gap:6px; padding:2px 12px 8px; flex-wrap:wrap; }
+  .pill{ background:var(--muted); border-radius:6px; color:var(--muted-fg); font-size:12px; padding:4px 8px;
+         display:flex; align-items:center; gap:4px; cursor:pointer; max-width:160px; }
+  .pill:hover{ background:var(--hover); }
+  .pill.ro{ cursor:default; }
+  .pill.ro:hover{ background:var(--muted); }
+  .arrow{ color:var(--muted-fg); display:flex; } .arrow svg{width:14px;height:14px;}
+  .spacer{ margin-left:auto; }
+  .ghost{ border:none; background:transparent; color:var(--muted-fg); border-radius:6px; cursor:pointer;
+          display:flex; align-items:center; gap:4px; font-size:12px; padding:4px 6px; }
+  .ghost:hover{ background:var(--muted); color:var(--fg); }
+  .ghost svg{ width:14px; height:14px; }
+  .chev{ transition:transform .15s; } .chev.open{ transform:rotate(180deg); }
+
+  /* 原文面板 */
+  #orig{ display:none; margin:0 12px 8px; background:var(--muted); border-radius:8px; padding:8px 10px;
+         color:var(--muted-fg); font-size:12px; white-space:pre-wrap; word-break:break-word; max-height:120px; overflow:auto; }
+
+  /* 结果区 */
+  #content{ flex:1 1 auto; overflow-y:auto; padding:4px 18px 12px; }
+  #root{ word-wrap:break-word; font-size:15px; line-height:1.75; }
+  #root pre{ background:var(--muted); border:1px solid var(--border); border-radius:8px; padding:8px 10px; overflow-x:auto; }
+  #root code{ font-family:Consolas,'Courier New',monospace; background:var(--muted); border-radius:4px; padding:0 4px; font-size:.92em; }
+  #root pre code{ background:none; padding:0; }
+  #root blockquote{ border-left:3px solid var(--border); margin:8px 0; padding:2px 12px; color:var(--muted-fg); }
+  #root table{ border-collapse:collapse; } #root td,#root th{ border:1px solid #ccc; padding:4px 10px; }
+  #root .katex{ font-size:1.06em; }
+  #root .katex-display{ overflow-x:auto; max-width:100%; padding:2px 0; }
+  #root h1,#root h2,#root h3,#root h4{ margin:.7em 0 .4em; line-height:1.4; }
+  #root p{ margin:.55em 0; } #root ul,#root ol{ padding-left:1.6em; }
+  .dim{ color:#999; }
+  .spin{ display:inline-block; width:14px; height:14px; border:2px solid #d5d5d5; border-top-color:#888; border-radius:50%; animation:r 0.8s linear infinite; vertical-align:-2px; }
+  @keyframes r{ to{ transform:rotate(360deg);} }
+
+  /* 底栏 */
+  #footer{ flex:0 0 40px; border-top:1px solid var(--border); display:flex; align-items:center; gap:2px; padding:0 10px; }
+  .fbtn{ width:30px; height:28px; border:none; background:transparent; border-radius:6px; color:var(--muted-fg);
+         display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .fbtn:hover{ background:var(--muted); color:var(--fg); }
+  .fbtn svg{ width:15px; height:15px; }
+  #toast{ margin-left:auto; color:#28a75a; font-size:12px; opacity:0; transition:opacity .2s; display:flex; align-items:center; gap:4px; }
+
+  /* 下拉菜单 / 弹窗 */
+  .menu{ position:fixed; background:#fff; border:1px solid var(--border); border-radius:8px; box-shadow:0 6px 20px rgba(0,0,0,.12);
+         padding:4px; min-width:120px; z-index:50; display:none; }
+  .menu .item{ padding:6px 10px; border-radius:6px; font-size:12px; color:var(--fg); cursor:pointer; }
+  .menu .item:hover{ background:var(--muted); }
+  .mask{ position:fixed; inset:0; background:rgba(0,0,0,.2); z-index:90; display:none; align-items:center; justify-content:center; }
+  .modal{ width:430px; max-height:80%; overflow:auto; background:#fff; border-radius:12px; padding:16px 18px; box-shadow:0 10px 40px rgba(0,0,0,.2); }
+  .modal h3{ margin:0 0 12px; font-size:14px; }
+  .modal label{ display:block; font-size:12px; color:var(--muted-fg); margin:8px 0 4px; }
+  .modal input,.modal textarea{ width:100%; border:1px solid var(--border); border-radius:6px; padding:6px 8px; font-size:12px;
+      font-family:inherit; color:var(--fg); outline:none; }
+  .modal input:focus,.modal textarea:focus{ border-color:var(--accent); }
+  .modal textarea{ height:80px; resize:vertical; }
+  .row{ display:flex; gap:8px; } .row>div{ flex:1; }
+  .mfoot{ display:flex; justify-content:flex-end; gap:8px; margin-top:14px; }
+  .btn{ border:none; border-radius:6px; padding:7px 14px; font-size:12px; cursor:pointer; }
+  .btn.pri{ background:var(--accent); color:#fff; } .btn.pri:hover{ filter:brightness(1.06);} .btn.plain{ background:var(--muted); color:var(--fg); }
+  .chk{ display:flex; align-items:center; gap:6px; font-size:12px; color:var(--fg); margin:8px 0; }
+</style>
+</head>
+<body>
+  <div id="titlebar">
+    <div id="drag"></div>
+    <div class="brand"><span class="logo">文A</span><span class="t">翻译</span></div>
+    <div class="winbtns">
+      <button class="wbtn" id="bPin" title="置顶"></button>
+      <button class="wbtn" id="bMin" title="关闭"></button>
+      <button class="wbtn" id="bClose" title="关闭"></button>
+    </div>
+  </div>
+
+  <div id="bar">
+    <div class="pill ro" id="srcPill">自动检测</div>
+    <span class="arrow" id="arrowIc"></span>
+    <div class="pill" id="tgtPill">自动 <span class="chev" id="tgtChev"></span></div>
+    <div class="spacer"></div>
+    <button class="ghost" id="bSettings" title="设置"></button>
+    <button class="ghost" id="bOrig">显示原文 <span class="chev" id="origChev"></span></button>
+  </div>
+
+  <div id="orig" class="allow"></div>
+  <div id="content" class="allow"><div id="root"><span class="dim">翻译中…</span></div></div>
+
+  <div id="footer">
+    <button class="fbtn" id="bCopy" title="复制 (C)"></button>
+    <button class="fbtn" id="bPause" title="暂停"></button>
+    <button class="fbtn" id="bRe" title="重新翻译 (R)"></button>
+    <span id="toast">✓ 复制成功</span>
+  </div>
+
+  <div class="menu" id="langMenu"></div>
+
+  <div class="mask" id="mask">
+    <div class="modal">
+      <h3>设置</h3>
+      <label>API 地址</label><input id="sBase">
+      <div class="row">
+        <div><label>端口(可选)</label><input id="sPort"></div>
+        <div><label>模型</label><input id="sModel"></div>
+      </div>
+      <label>API Key</label><input id="sKey" type="password">
+      <label>系统提示词</label><textarea id="sPrompt"></textarea>
+      <div class="row">
+        <div><label>译文字体大小</label><input id="sFont" type="number" min="10" max="28"></div>
+        <div></div>
+      </div>
+      <label class="chk"><input type="checkbox" id="sThink" style="width:auto"> 允许模型思考</label>
+      <label class="chk"><input type="checkbox" id="sSel" style="width:auto"> 启用划词翻译</label>
+      <div class="mfoot">
+        <button class="btn plain" id="mCancel">取消</button>
+        <button class="btn pri" id="mSave">保存</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+var $ = function (id) { return document.getElementById(id); };
+var root = $('root'), content = $('content');
+var CFG = {}, ORIG = '', streaming = false;
+
+var I = {
+  pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 17v5M9 10.8l-2 2.2h10l-2-2.2V5l1-2H8l1 2z"/></svg>',
+  min: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/></svg>',
+  close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  arrow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+  chev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>',
+  gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 0 0 5 12a7 7 0 0 0 .1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6A7 7 0 0 0 19 12z"/></svg>',
+  copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>',
+  pause: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5v14M15 5v14"/></svg>',
+  re: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7M21 3v6h-6"/></svg>'
+};
+$('bPin').innerHTML = I.pin; $('bMin').innerHTML = I.min; $('bClose').innerHTML = I.close;
+$('arrowIc').innerHTML = I.arrow; $('tgtChev').innerHTML = I.chev; $('origChev').innerHTML = I.chev;
+$('bSettings').innerHTML = I.gear; $('bCopy').innerHTML = I.copy; $('bPause').innerHTML = I.pause; $('bRe').innerHTML = I.re;
+
+function post(o) { if (window.chrome && window.chrome.webview) window.chrome.webview.postMessage(JSON.stringify(o)); }
+
+/* ---------- 数学保护 + KaTeX 同步渲染 (Cherry 同款, 无闪烁) ---------- */
+function protectMath(md) {
+  var store = [];
+  function put(raw, tex, d) { store.push({ raw: raw, tex: tex, d: d }); return '@@LLMMATH' + (store.length - 1) + 'MATHLL@@'; }
+  md = md.replace(/\$\$([\s\S]+?)\$\$/g, function (m, t) { return put(m, t, true); });
+  md = md.replace(/\\\[([\s\S]+?)\\\]/g, function (m, t) { return put(m, t, true); });
+  md = md.replace(/\\\(([\s\S]+?)\\\)/g, function (m, t) { return put(m, t, false); });
+  md = md.replace(/\$([^\$\n]+?)\$/g, function (m, t) { return put(m, t, false); });
+  return { md: md, store: store };
+}
+function renderMath(it) {
+  if (window.katex) {
+    try { return katex.renderToString(it.tex, { displayMode: it.d, throwOnError: false, strict: false }); } catch (e) { return it.raw; }
+  }
+  return it.raw;
+}
+function restoreMath(html, store) { return html.replace(/@@LLMMATH(\d+)MATHLL@@/g, function (_, i) { return renderMath(store[+i]); }); }
+var lastRender = 0;
+function setContent(md, final) {
+  var now = Date.now();
+  if (!final && now - lastRender < 150) return;   // 流式节流
+  lastRender = now;
+  var sy = content.scrollTop;
+  if (!window.marked) { root.innerText = md; return; }
+  var p = protectMath(md);
+  root.innerHTML = restoreMath(marked.parse(p.md), p.store);   // KaTeX 同步, 一次成型
+  content.scrollTop = sy;
+}
+function setFont(px) { root.style.fontSize = px + 'px'; }
+
+/* ---------- 由 C# 调用 ---------- */
+window.init = function (cfg) {
+  CFG = cfg || {};
+  document.body.style.zoom = (CFG.UiZoom || 100) / 100;   // 界面缩放
+  setFont(CFG.FontSize || 15);
+  $('tgtPill').firstChild.nodeValue = langName(CFG.TargetLang) + ' ';
+  $('bPin').classList.toggle('on', !!CFG.Pinned);
+  applyOrig();
+};
+window.setOrig = function (text, show) { ORIG = text || ''; CFG.ShowOriginal = show; applyOrig(); };
+function applyOrig() {
+  var show = !!CFG.ShowOriginal && ORIG;
+  $('orig').style.display = show ? 'block' : 'none';
+  if (show) $('orig').textContent = ORIG;
+  $('origChev').classList.toggle('open', !!CFG.ShowOriginal);
+  $('bOrig').firstChild.nodeValue = (CFG.ShowOriginal ? '隐藏原文 ' : '显示原文 ');
+}
+window.setState = function (s) { streaming = s; $('bPause').style.visibility = s ? 'visible' : 'hidden'; };
+
+function langName(c) { return c === 'zh' ? '简体中文' : (c === 'en' ? 'English' : '自动'); }
+
+/* ---------- 交互 ---------- */
+$('drag').addEventListener('mousedown', function (e) { if (e.button === 0) post({ t: 'drag' }); });
+$('bClose').onclick = function () { post({ t: 'close' }); };
+$('bMin').onclick = function () { post({ t: 'close' }); };
+$('bPin').onclick = function () { post({ t: 'pin' }); };
+$('bCopy').onclick = function () { post({ t: 'copy' }); };
+$('bRe').onclick = function () { post({ t: 'retranslate' }); };
+$('bPause').onclick = function () { post({ t: 'pause' }); };
+$('bOrig').onclick = function () { post({ t: 'orig' }); };
+$('bSettings').onclick = function (e) { openSettings(); e.stopPropagation(); };
+
+// 由 C# 按真实结果调用 (成功/失败), 不再乐观提示
+window.toast = function (msg, ok) {
+  var t = $('toast');
+  t.textContent = msg;
+  t.style.color = ok === false ? '#d64545' : '#28a75a';
+  t.style.opacity = 1;
+  clearTimeout(t._h); t._h = setTimeout(function () { t.style.opacity = 0; }, 1400);
+};
+
+/* 目标语言下拉 */
+$('tgtPill').onclick = function (e) {
+  var m = $('langMenu'); m.innerHTML = '';
+  ['auto', 'zh', 'en'].forEach(function (c) {
+    var d = document.createElement('div'); d.className = 'item'; d.textContent = langName(c);
+    d.onclick = function (ev) { ev.stopPropagation(); m.style.display = 'none'; post({ t: 'lang', tgt: c }); };
+    m.appendChild(d);
+  });
+  var r = $('tgtPill').getBoundingClientRect();
+  m.style.left = r.left + 'px'; m.style.top = (r.bottom + 4) + 'px'; m.style.display = 'block';
+  e.stopPropagation();
+};
+document.addEventListener('mousedown', function () { $('langMenu').style.display = 'none'; });
+
+/* 设置弹窗 */
+function openSettings() {
+  $('sBase').value = CFG.ApiBase || ''; $('sPort').value = CFG.Port || ''; $('sModel').value = CFG.Model || '';
+  $('sKey').value = CFG.ApiKey || ''; $('sPrompt').value = CFG.Prompt || ''; $('sFont').value = CFG.FontSize || 15;
+  $('sThink').checked = !!CFG.EnableThinking; $('sSel').checked = CFG.EnableSelection !== false;
+  $('mask').style.display = 'flex';
+}
+$('mCancel').onclick = function () { $('mask').style.display = 'none'; };
+$('mSave').onclick = function () {
+  post({
+    t: 'setconfig', cfg: {
+      ApiBase: $('sBase').value.trim(), Port: $('sPort').value.trim(), Model: $('sModel').value.trim(),
+      ApiKey: $('sKey').value.trim(), Prompt: $('sPrompt').value, FontSize: +$('sFont').value || 15,
+      EnableThinking: $('sThink').checked, EnableSelection: $('sSel').checked
+    }
+  });
+  $('mask').style.display = 'none';
+};
+
+/* 键盘 */
+var _lastCopyKey = 0, _lastRetKey = 0;
+function _keyAction(e) {
+  if (e.key === 'Escape') { if ($('mask').style.display === 'flex') $('mask').style.display = 'none'; else post({ t: 'esc' }); }
+  else if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+    var now = Date.now();
+    if (e.key === 'c' || e.key === 'C') { if (now - _lastCopyKey > 400) { _lastCopyKey = now; post({ t: 'copy' }); } }
+    else if (e.key === 'r' || e.key === 'R') { if (now - _lastRetKey > 400) { _lastRetKey = now; post({ t: 'retranslate' }); } }
+  }
+}
+/* keyboard: when IME is active keydown may be intercepted, so keyup is a fallback (400ms dedup) */
+document.addEventListener('keydown', _keyAction);
+document.addEventListener('keyup', _keyAction);
+
+/* ready 用 DOMContentLoaded: 'load' 会被字体等子资源拖住 (慢机器上可达数十秒), 导致初始状态推送缺失 */
+window.addEventListener('DOMContentLoaded', function () { post({ t: 'ready', dpr: window.devicePixelRatio }); });
+</script>
+</body>
+</html>
