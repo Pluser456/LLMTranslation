@@ -62,7 +62,8 @@ namespace LLMTranslation
             // None: 尺寸统一由 Dpi.Scale 手动计算; 若用 Dpi 模式, DPI 感知进程下 WinForms 会再乘一次 1.25 (双重缩放)
             this.AutoScaleMode = AutoScaleMode.None;
             FormBorderStyle = FormBorderStyle.None;
-            ShowInTaskbar = false;
+            ShowInTaskbar = true;                // 真最小化: 需要任务栏按钮 (窗口隐藏时不占位)
+            Icon = AppContext.GetSharedIcon();   // 任务栏图标 = 托盘图标 (蓝底圆角白"译")
             StartPosition = FormStartPosition.Manual;
             float s = Dpi.Scale;
             Size = new Size((int)(520 * s), (int)(400 * s));
@@ -72,7 +73,7 @@ namespace LLMTranslation
             DoubleBuffered = true;
             BackColor = Color.White;
             Font = new Font("Microsoft YaHei UI", 9f);
-            Text = "LLMT_TRANSLATE";   // 稳定标题, 供自动化测试定位
+            Text = "LLM 划词翻译";   // 稳定标题: 任务栏显示名 + 自动化测试定位
 
             // ---- 译文区 ----
             txtResult = new TextBox();
@@ -201,12 +202,36 @@ namespace LLMTranslation
         protected override void OnHandleCreated(EventArgs e)
         {
             base.OnHandleCreated(e);
+            // 无边框窗默认无 WS_MINIMIZEBOX: 补齐后 WindowState=Minimized 才能以带图标的任务栏按钮形式最小化
+            try
+            {
+                int st = NativeMethods.GetWindowLong(this.Handle, NativeMethods.GWL_STYLE);
+                NativeMethods.SetWindowLong(this.Handle, NativeMethods.GWL_STYLE,
+                    st | NativeMethods.WS_MINIMIZEBOX | NativeMethods.WS_SYSMENU);
+            }
+            catch { }
+            // FormBorderStyle=None 时 WinForms 不会把 Form.Icon 发到窗口 (跳过/清空 WM_SETICON),
+            // 任务栏按钮只能回退到 exe 默认图标。手动补发三种尺寸槽位, 强制用托盘同款"译"图标 (OnShown 再补一次防 UpdateIcon 清空)。
+            ApplyWindowIcon();
             WinLog.Window("translate-handle", this);
+        }
+
+        private void ApplyWindowIcon()
+        {
+            try
+            {
+                IntPtr hicon = AppContext.GetSharedIcon().Handle;
+                NativeMethods.SendMessage(this.Handle, 0x0080 /*WM_SETICON*/, new IntPtr(0 /*ICON_SMALL2*/), hicon);   // 默认槽 (Alt+Tab/任务栏)
+                NativeMethods.SendMessage(this.Handle, 0x0080, new IntPtr(1 /*ICON_SMALL*/), hicon);
+                NativeMethods.SendMessage(this.Handle, 0x0080, new IntPtr(2 /*ICON_BIG*/), hicon);
+            }
+            catch { }
         }
 
         protected override void OnShown(EventArgs e)
         {
             base.OnShown(e);
+            ApplyWindowIcon();   // WinForms 的 UpdateIcon 可能在显示时清空无边框窗图标, 再补一次
             WinLog.Window("translate-shown", this);
         }
 
@@ -404,6 +429,7 @@ namespace LLMTranslation
                     switch (m.t)
                     {
                         case "drag": StartDrag(); break;
+                        case "min": WindowState = FormWindowState.Minimized; break;
                         case "esc": CloseTranslation(); break;
                         case "close": CloseTranslation(); break;
                         case "pin": _pinned = !_pinned; TopMost = _pinned; PushInit(); break;
@@ -480,6 +506,7 @@ namespace LLMTranslation
         {
             if (_cts != null) { _cts.Cancel(); _cts = null; }
             _pushTimer.Stop();
+            if (WindowState == FormWindowState.Minimized) WindowState = FormWindowState.Normal;   // 避免"隐藏且最小化"残留任务栏按钮
             Hide();
         }
 
@@ -562,6 +589,7 @@ namespace LLMTranslation
             }
             _keepPos = false;
 
+            if (WindowState == FormWindowState.Minimized) WindowState = FormWindowState.Normal;   // 最小化中再点胶囊 → 直接恢复
             if (!Visible) Show();
             Activate();
             BringToFront();

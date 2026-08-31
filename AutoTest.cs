@@ -16,6 +16,8 @@ static class AutoTest
     [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr h);
     [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr h);
     [DllImport("user32.dll")] static extern bool ShowWindow(IntPtr h, int cmd);
+    [DllImport("user32.dll")] static extern bool IsIconic(IntPtr h);
+    [DllImport("user32.dll")] static extern bool IsWindow(IntPtr h);
     [DllImport("user32.dll")] static extern bool MoveWindow(IntPtr h, int x, int y, int w, int ht, bool repaint);
     [DllImport("user32.dll")] static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
     static void ForceForeground(IntPtr h) { keybd_event(0x12, 0, 0, UIntPtr.Zero); SetForegroundWindow(h); keybd_event(0x12, 0, 2, UIntPtr.Zero); }
@@ -134,7 +136,7 @@ static class AutoTest
             GetWindowRect(tgt, out tt);
             // 复划必须划在翻译窗未遮挡的区域: 用测试窗顶部条带, 避开下方已打开的翻译窗
             int yResel = tt.Top + 30;
-            IntPtr trNow = FindWindow(null, "LLMT_TRANSLATE");
+            IntPtr trNow = FindWindow(null, "LLM 划词翻译");
             if (trNow != IntPtr.Zero) { RECT trr0; GetWindowRect(trNow, out trr0); if (yResel >= trr0.Top) yResel = tt.Top + 10; }
             DragSelect(tt, yResel, tt.Left + 300);
             string d2; int r2 = CheckCapsule(out d2);
@@ -143,7 +145,7 @@ static class AutoTest
         else Console.WriteLine("translate-open reselect => no initial capsule");
 
         // 拖动翻译窗标题栏(>8px): 不应弹出胶囊 (原生 caption 拖动不经过 DragActive 标志)
-        IntPtr tr = FindWindow(null, "LLMT_TRANSLATE");
+        IntPtr tr = FindWindow(null, "LLM 划词翻译");
         if (tr != IntPtr.Zero && IsWindowVisible(tr))
         {
             // 先在测试窗内点一下, 确保旧胶囊已隐藏
@@ -161,9 +163,38 @@ static class AutoTest
         }
         else Console.WriteLine("titlebar drag no-capsule => SKIPPED (no translate window)");
 
+        // 最小化到任务栏: 点标题栏 bMin → 真最小化 (窗口存活且 IsIconic); ShowWindow 恢复后位置尺寸不变。
+        // bMin 坐标按 CSS 几何: 右内边距8 + close宽30 + gap2 + 半宽15 = 右缩55, y=标题栏38/2=19; 物理缩放用窗口宽/设计宽520自校准
+        IntPtr trm = FindWindow(null, "LLM 划词翻译");
+        if (trm != IntPtr.Zero && IsWindowVisible(trm))
+        {
+            RECT mr; GetWindowRect(trm, out mr);
+            // 窗口可能被用户拖到屏外 → 先拉回屏内安全区再测 (尺寸不变)
+            int mw = mr.Right - mr.Left, mh = mr.Bottom - mr.Top;
+            if (mr.Right > 1900 || mr.Left < 20 || mr.Bottom > 1060) { MoveWindow(trm, 900, 220, mw, mh, true); Thread.Sleep(300); GetWindowRect(trm, out mr); }
+            float ms = (mr.Right - mr.Left) / 520f;
+            int bx = mr.Right - (int)Math.Round(55 * ms), by = mr.Top + (int)Math.Round(19 * ms);
+            Down(bx, by); Up(bx, by);
+            PumpSleep(700);
+            bool iconic = IsIconic(trm), alive = IsWindow(trm) && IsWindowVisible(trm);
+            Console.WriteLine("minimize-to-taskbar => " + (iconic && alive ? "PASS" : "FAIL") + " | iconic=" + iconic + " alive=" + alive + " click=(" + bx + "," + by + ") scale=" + ms.ToString("0.00"));
+            if (alive && iconic)
+            {
+                ShowWindow(trm, 9); // SW_RESTORE: 等价于点任务栏按钮
+                PumpSleep(500);
+                RECT ar; GetWindowRect(trm, out ar);
+                bool same = Math.Abs(ar.Left - mr.Left) < 4 && Math.Abs(ar.Top - mr.Top) < 4
+                    && Math.Abs((ar.Right - ar.Left) - (mr.Right - mr.Left)) < 4 && !IsIconic(trm);
+                Console.WriteLine("restore-from-taskbar => " + (same ? "PASS" : "FAIL") + " | before=(" + mr.Left + "," + mr.Top + "," + (mr.Right - mr.Left) + "x" + (mr.Bottom - mr.Top) + ") after=(" + ar.Left + "," + ar.Top + "," + (ar.Right - ar.Left) + "x" + (ar.Bottom - ar.Top) + ")");
+            }
+            else if (alive) Console.WriteLine("restore-from-taskbar => FAIL (未最小化, 跳过恢复验证)");
+            else Console.WriteLine("restore-from-taskbar => FAIL (window gone)");
+        }
+        else Console.WriteLine("minimize-to-taskbar => SKIPPED (no translate window)");
+
         // 复制验证: 翻译窗打开时按 C, 剪贴板必须被写入译文 (用户关心的"复制失效"场景)。
         // 先用哨兵值覆盖剪贴板, 按 C 后必须不再是哨兵 (与翻译内容是否恰好相同无关)
-        IntPtr tr3 = FindWindow(null, "LLMT_TRANSLATE");
+        IntPtr tr3 = FindWindow(null, "LLM 划词翻译");
         if (tr3 != IntPtr.Zero && IsWindowVisible(tr3))
         {
             const string sentinel = "LLMT_SENTINEL_9f3a2b";

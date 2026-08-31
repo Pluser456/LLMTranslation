@@ -97,7 +97,7 @@
     <div class="brand"><span class="logo">文A</span><span class="t">翻译</span></div>
     <div class="winbtns">
       <button class="wbtn" id="bPin" title="置顶"></button>
-      <button class="wbtn" id="bMin" title="关闭"></button>
+      <button class="wbtn" id="bMin" title="最小化"></button>
       <button class="wbtn" id="bClose" title="关闭"></button>
     </div>
   </div>
@@ -222,7 +222,7 @@ function langName(c) { return c === 'zh' ? '简体中文' : (c === 'en' ? 'Engli
 /* ---------- 交互 ---------- */
 $('drag').addEventListener('mousedown', function (e) { if (e.button === 0) post({ t: 'drag' }); });
 $('bClose').onclick = function () { post({ t: 'close' }); };
-$('bMin').onclick = function () { post({ t: 'close' }); };
+$('bMin').onclick = function () { post({ t: 'min' }); };
 $('bPin').onclick = function () { post({ t: 'pin' }); };
 $('bCopy').onclick = function () { post({ t: 'copy' }); };
 $('bRe').onclick = function () { post({ t: 'retranslate' }); };

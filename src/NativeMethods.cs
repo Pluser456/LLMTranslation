@@ -57,6 +57,15 @@ namespace LLMTranslation
         public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int val, int size);
         public const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
         public const int DWMWCP_ROUND = 2;
+
+        // ---- 窗口样式: 无边框窗补齐 WS_MINIMIZEBOX/WS_SYSMENU, 使其能真正最小化到任务栏 ----
+        [DllImport("user32.dll")]
+        public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+        [DllImport("user32.dll")]
+        public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+        public const int GWL_STYLE = -16;
+        public const int WS_MINIMIZEBOX = 0x00020000;
+        public const int WS_SYSMENU = 0x00080000;
         public static void ApplyFluentRound(IntPtr hwnd)
         {
             try { int v = DWMWCP_ROUND; DwmSetWindowAttribute(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, ref v, 4); } catch { }

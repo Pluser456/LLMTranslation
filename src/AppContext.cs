@@ -49,7 +49,6 @@ namespace LLMTranslation
         private bool _forceNext;
         private string _lastText = "";
         private int _lastTick;
-        private Bitmap _iconBmp;
 
         public AppContext()
         {
@@ -128,7 +127,7 @@ namespace LLMTranslation
             }
         }
 
-        private const string BuildTag = "v12dpi";    // v11log2 + 启动钉死 PMv2 感知 + TranslateForm 去双重缩放
+        private const string BuildTag = "v13min3";    // v12dpi + 翻译窗真最小化到任务栏 (exe 内嵌图标 + WM_SETICON 双保险)
         private static readonly bool DebugLog = Environment.GetEnvironmentVariable("LLMTRANSLATION_DEBUG") == "1";
         // 调试日志开关: 环境变量 LLMTRANSLATION_DEBUG=1, 或数据目录存在 debug.txt 文件 (删掉文件即关闭)
         private static readonly string DebugFlagFile = Path.Combine(
@@ -161,7 +160,7 @@ namespace LLMTranslation
         }
 
         private const string RunDepsVersion = "1";   // 内嵌 WebView2 依赖包版本 (变更时 +1 触发重新解包)
-        private const string WebAssetsVersion = "5"; // 内嵌 web 资源版本 (变更时 +1 触发重新解包)
+        private const string WebAssetsVersion = "6"; // 内嵌 web 资源版本 (变更时 +1 触发重新解包)
 
         private static bool ExtractZipIfChanged(string resName, string targetDir, string version)
         {
@@ -220,33 +219,42 @@ namespace LLMTranslation
             catch { }
         }
 
+        private static Icon _sharedIcon;
+        // 托盘/任务栏共用图标: 32×32 圆角蓝底白"译"。首次调用绘制, 之后直接复用
+        public static Icon GetSharedIcon()
+        {
+            if (_sharedIcon == null)
+            {
+                Bitmap bmp = new Bitmap(32, 32, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+                using (Graphics g = Graphics.FromImage(bmp))
+                {
+                    g.SmoothingMode = SmoothingMode.AntiAlias;
+                    g.Clear(Color.Transparent);
+                    using (GraphicsPath path = FloatingButtonForm.RoundRect(new Rectangle(1, 1, 30, 30), 8))
+                    using (SolidBrush brush = new SolidBrush(Color.FromArgb(70, 130, 210)))
+                    {
+                        g.FillPath(brush, path);
+                    }
+                    // 图标画布固定 32×32 (不随 DPI 缩放), 故字体用固定像素 = 13pt@96dpi, 保持与原 100% 时代相同的字形占比;
+                    // 若用 POINT 字体, 感知进程下会自动放大, 字形相对图标变大
+                    using (Font f = new Font("Microsoft YaHei UI", 13f * 96f / 72f, FontStyle.Bold, GraphicsUnit.Pixel))
+                    using (SolidBrush fg = new SolidBrush(Color.White))
+                    {
+                        StringFormat sf = new StringFormat();
+                        sf.Alignment = StringAlignment.Center;
+                        sf.LineAlignment = StringAlignment.Center;
+                        g.DrawString("译", f, fg, new RectangleF(0, 0, 32, 32), sf);
+                    }
+                }
+                _sharedIcon = Icon.FromHandle(bmp.GetHicon());
+            }
+            return _sharedIcon;
+        }
+
         private void SetupTray()
         {
-            _iconBmp = new Bitmap(32, 32, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-            using (Graphics g = Graphics.FromImage(_iconBmp))
-            {
-                g.SmoothingMode = SmoothingMode.AntiAlias;
-                g.Clear(Color.Transparent);
-                using (GraphicsPath path = FloatingButtonForm.RoundRect(new Rectangle(1, 1, 30, 30), 8))
-                using (SolidBrush brush = new SolidBrush(Color.FromArgb(70, 130, 210)))
-                {
-                    g.FillPath(brush, path);
-                }
-                // 图标画布固定 32×32 (不随 DPI 缩放), 故字体用固定像素 = 13pt@96dpi, 保持与原 100% 时代相同的字形占比;
-                // 若用 POINT 字体, 感知进程下会自动放大, 字形相对图标变大
-                using (Font f = new Font("Microsoft YaHei UI", 13f * 96f / 72f, FontStyle.Bold, GraphicsUnit.Pixel))
-                using (SolidBrush fg = new SolidBrush(Color.White))
-                {
-                    StringFormat sf = new StringFormat();
-                    sf.Alignment = StringAlignment.Center;
-                    sf.LineAlignment = StringAlignment.Center;
-                    g.DrawString("译", f, fg, new RectangleF(0, 0, 32, 32), sf);
-                }
-            }
-            Icon icon = Icon.FromHandle(_iconBmp.GetHicon());
-
             _tray = new NotifyIcon();
-            _tray.Icon = icon;
+            _tray.Icon = GetSharedIcon();
             _tray.Text = "LLM 划词翻译";
             _tray.MouseClick += delegate (object s, MouseEventArgs e) { if (e.Button == MouseButtons.Right || e.Button == MouseButtons.Left) ShowTrayMenu(); };
             _tray.DoubleClick += delegate { OpenDialog("set"); };

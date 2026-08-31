@@ -14,6 +14,7 @@ if not exist "dist\build\rundeps.zip" ( echo PACK DEPS FAILED & exit /b 1 )
 
 "%FW%\csc.exe" /nologo /optimize /target:winexe /out:dist\LLMTranslation.exe ^
   /win32manifest:src\app.manifest ^
+  /win32icon:src\app.ico ^
   /reference:System.dll ^
   /reference:System.Core.dll ^
   /reference:System.Drawing.dll ^
@@ -71,6 +72,7 @@ if %errorlevel% neq 0 (
 
 "%FW%\csc.exe" /nologo /optimize /target:winexe /out:dist\LLMTranslation-Setup.exe ^
   /win32manifest:src\app.manifest ^
+  /win32icon:src\app.ico ^
   /reference:System.dll ^
   /reference:System.Windows.Forms.dll ^
   /resource:dist\LLMTranslation.exe,payload ^
