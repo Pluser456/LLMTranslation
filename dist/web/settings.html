@@ -52,7 +52,7 @@
       </div>
       <div class="row">
         <div><label>划词按钮延时 ms (0-2000)</label><input id="sDelay" type="number" min="0" max="2000"></div>
-        <div><label>全局快捷键 (点击后按组合键)</label><input id="sHot"></div>
+        <div><label>全局快捷键 (点击后按组合键)</label><input id="sHot" placeholder="按组合键录入, Esc 清空"></div>
       </div>
       <label class="chk"><input type="checkbox" id="sThink"> 允许模型思考 (翻译建议关闭)</label>
       <label class="chk"><input type="checkbox" id="sSel"> 启用划词翻译</label>
@@ -107,21 +107,29 @@ $('save').onclick = function () {
     }
   });
 };
-/* 快捷键捕获: 聚焦后按下组合键即记录, 也支持手动输入 */
+/* 快捷键捕获: 点击(聚焦)后清空, 随后每按一个键渐进显示组合 —
+   按 Ctrl → "Ctrl", 再按 Shift → "Ctrl+Shift", 再按 Q → "Ctrl+Shift+Q"; Esc 清空重录 */
 (function () {
   var el = $('sHot'), listening = false;
-  el.addEventListener('focus', function () { listening = true; el.value = '按下组合键…'; });
-  el.addEventListener('blur', function () { listening = false; if (!el.value || el.value === '按下组合键…') el.value = CFG.Hotkey || 'Alt+Q'; });
+  el.addEventListener('focus', function () { listening = true; el.value = ''; });
+  el.addEventListener('blur', function () { listening = false; if (!el.value) el.value = CFG.Hotkey || 'Alt+Q'; });
   el.addEventListener('keydown', function (e) {
     if (!listening) return;
-    e.preventDefault(); e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();   // 吞掉按键, 防其触发系统/页面行为
     var parts = [];
     if (e.ctrlKey) parts.push('Ctrl');
     if (e.altKey) parts.push('Alt');
     if (e.shiftKey) parts.push('Shift');
+    if (e.metaKey) parts.push('Win');
     var k = e.key;
-    if (k === 'Control' || k === 'Alt' || k === 'Shift') return;
-    if (k && k.length === 1) k = k.toUpperCase();
+    if (k === 'Control' || k === 'Alt' || k === 'Shift' || k === 'Meta') {
+      el.value = parts.join('+');   // 只按了修饰键: 先显示当前修饰组合
+      return;
+    }
+    if (k === 'Escape') { el.value = ''; return; }   // Esc: 清空重录 (stopPropagation 已防止误关窗口)
+    if (!k || k === 'Dead') return;
+    if (k === ' ') k = 'Space';
+    else if (k.length === 1) k = k.toUpperCase();
     parts.push(k);
     el.value = parts.join('+');
   });
