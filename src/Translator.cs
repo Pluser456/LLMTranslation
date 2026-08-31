@@ -24,7 +24,7 @@ namespace LLMTranslation
         public static string BuildUrl(Config cfg)
         {
             string b = (cfg.ApiBase ?? "").Trim();
-            if (b.Length == 0) b = "https://api.openai.com/v1";
+            if (b.Length == 0) b = "https://api.deepseek.com/v1";
             while (b.EndsWith("/")) b = b.Substring(0, b.Length - 1);
             if (!b.Contains("://")) b = "https://" + b;
             string url = b + "/chat/completions";
