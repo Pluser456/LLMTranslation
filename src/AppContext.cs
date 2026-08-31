@@ -26,7 +26,6 @@ namespace LLMTranslation
         private WinTimer _popupTimer;
         private WinTimer _hookWatchdog;
         // 后台取词线程: 所有慢调用(UIA/跨进程读/剪贴板)都在这里, UI 线程永不阻塞 => 低级钩子不会超时被摘除
-        private Thread _worker;
         private readonly Queue<Action> _workerQueue = new Queue<Action>();
         private readonly object _workerLock = new object();
         private volatile int _extractGen;   // 取词任务代数: 点击别处后加一, 使排队中/进行中的旧任务作废
@@ -131,7 +130,7 @@ namespace LLMTranslation
             }
         }
 
-        private const string BuildTag = "v13wdg1";    // v12dpi + 翻译窗真最小化到任务栏 (exe 内嵌图标 + WM_SETICON 双保险)
+        private const string BuildTag = "v13cln3";    // v12dpi + 翻译窗真最小化到任务栏 (exe 内嵌图标 + WM_SETICON 双保险)
         private static readonly bool DebugLog = Environment.GetEnvironmentVariable("LLMTRANSLATION_DEBUG") == "1";
         // 调试日志开关: 环境变量 LLMTRANSLATION_DEBUG=1, 或数据目录存在 debug.txt 文件 (删掉文件即关闭)
         private static readonly string DebugFlagFile = Path.Combine(
@@ -499,7 +498,7 @@ namespace LLMTranslation
         // 后台取词线程: STA(剪贴板要求) + 轻消息泵; 阻塞只发生在该线程, 不影响 UI 线程与低级钩子
         private void StartWorker()
         {
-            _worker = new Thread(new ThreadStart(delegate
+            var worker = new Thread(new ThreadStart(delegate
             {
                 // 本线程要当剪贴板 owner 就必须在自身线程建一个顶层窗:
                 // 系统的剪贴板所有权/延迟渲染消息 (WM_KILLCLIPBOARD / WM_RENDERFORMAT)
@@ -527,9 +526,9 @@ namespace LLMTranslation
                     Thread.Sleep(10);
                 }
             }));
-            _worker.IsBackground = true;
-            _worker.SetApartmentState(ApartmentState.STA);
-            _worker.Start();
+            worker.IsBackground = true;
+            worker.SetApartmentState(ApartmentState.STA);
+            worker.Start();
         }
 
         // 入队后台工作线程; 队列满时返回 false (调用方可自行处理)
