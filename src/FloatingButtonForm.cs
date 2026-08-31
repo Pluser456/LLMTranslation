@@ -16,9 +16,8 @@ namespace LLMTranslation
             ShowInTaskbar = false;
             TopMost = true;
             StartPosition = FormStartPosition.Manual;
-            // 胶囊固定 100% 设计尺寸 (98×40), 不随系统缩放放大:
-            // 实测旧版在本系统上就是 98×40 物理 1:1 + pt 字体按真实 120dpi 渲染的大字;
-            // 窗口尺寸钉死, 字体保持 pt 声明按真实 DPI 换算, 与旧版像素级一致。
+            // 胶囊固定 100% 设计尺寸 (98×40), 不随系统缩放放大;
+            // 字体同样钉死固定像素字号(见 OnPaint) → 任何缩放屏幕上观感完全一致。
             Size = new Size(98, 40);
             DoubleBuffered = true;
             BackColor = Color.Magenta;
@@ -75,18 +74,18 @@ namespace LLMTranslation
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
             g.Clear(TransparencyKey);   // 关键色透明
-            // 字体保持 pt 声明: 实测旧版(不感知)在本系统上窗口 DC 报真实 120dpi,
-            // pt→px 按 120 换算(10.5pt=17.5px)——即用户熟悉的"小胶囊配大字"。
-            // 感知进程同样按真实 DPI 换算, 像素级一致; 100% 机器上则回到 14px 原始设计。
+            // 字体钉死为固定物理像素: 17.5/14.17/18.33px = 旧版(建分支前)在本机的观感
+            // (旧版不感知进程的窗口 DC 报真实 120dpi, 10.5/8.5/11pt 按 120 换算而来)。
+            // GraphicsUnit.Pixel 为字面设备像素, 不受进程 DPI 影响 → 任何缩放屏幕观感一致。
             Rectangle r = new Rectangle(0, 0, 97, 39);
             using (GraphicsPath path = RoundRect(r, 9))
             {
                 using (SolidBrush brush = new SolidBrush(Color.White)) g.FillPath(brush, path);
                 using (Pen pen = new Pen(Color.FromArgb(210, 210, 210))) g.DrawPath(pen, path);
             }
-            using (Font f1 = new Font("Microsoft YaHei UI", 10.5f, FontStyle.Bold))
-            using (Font f2 = new Font("Microsoft YaHei UI", 8.5f, FontStyle.Bold))
-            using (Font f3 = new Font("Microsoft YaHei UI", 11f, FontStyle.Regular))
+            using (Font f1 = new Font("Microsoft YaHei UI", 17.5f, FontStyle.Bold, GraphicsUnit.Pixel))
+            using (Font f2 = new Font("Microsoft YaHei UI", 14.17f, FontStyle.Bold, GraphicsUnit.Pixel))
+            using (Font f3 = new Font("Microsoft YaHei UI", 18.33f, FontStyle.Regular, GraphicsUnit.Pixel))
             using (SolidBrush fg = new SolidBrush(Color.FromArgb(60, 60, 60)))
             {
                 g.DrawString("文", f1, fg, 8, 4);
