@@ -46,6 +46,7 @@ namespace LLMTranslation
         private Point _pendingPoint;
         private string _pendingText;
         private bool _forceNext;
+        private bool _hotkeyDirect;   // 热键触发的取词: 取到后直接开翻译窗, 不弹胶囊 (随任务传参, 取词失败不泄漏)
         private string _lastText = "";
         private int _lastTick;
 
@@ -82,10 +83,12 @@ namespace LLMTranslation
                 if (_isDown) { Log("extract skip: still dragging"); return; }   // 拖拽进行中不取词, 避免抓到半截选区弹野胶囊
                 bool force = _forceNext;
                 _forceNext = false;
+                bool direct = _hotkeyDirect;
+                _hotkeyDirect = false;   // 立即消费: 取词失败/被丢弃时不会泄漏到下一次划词
                 Point pt = _pendingPoint;
                 int gen = ++_extractGen;   // 新任务 = 新代数; 旧任务发现代数不符即自行作废
                 Log("extract enqueue gen=" + gen);
-                EnqueueWork(delegate { TryExtract(pt, force, gen); });
+                EnqueueWork(delegate { TryExtract(pt, force, gen, direct); });
             };
 
             StartWorker();
@@ -117,6 +120,7 @@ namespace LLMTranslation
                 // 延迟 250ms 等用户松开 Alt, 再取词
                 _pendingPoint = Cursor.Position;
                 _forceNext = true;
+                _hotkeyDirect = true;   // 热键路径: 取到后直接翻译, 不弹胶囊
                 _extractTimer.Stop();
                 _extractTimer.Interval = 250;
                 _extractTimer.Start();
@@ -130,7 +134,7 @@ namespace LLMTranslation
             }
         }
 
-        private const string BuildTag = "v13hot1";    // v12dpi + 翻译窗真最小化到任务栏 (exe 内嵌图标 + WM_SETICON 双保险)
+        private const string BuildTag = "v13hot2";    // v12dpi + 翻译窗真最小化到任务栏 (exe 内嵌图标 + WM_SETICON 双保险)
         private static readonly bool DebugLog = Environment.GetEnvironmentVariable("LLMTRANSLATION_DEBUG") == "1";
         // 调试日志开关: 环境变量 LLMTRANSLATION_DEBUG=1, 或数据目录存在 debug.txt 文件 (删掉文件即关闭)
         private static readonly string DebugFlagFile = Path.Combine(
@@ -405,9 +409,9 @@ namespace LLMTranslation
                    cls == "VirtualConsoleClass" || cls == "WTWindow" || cls == "Vim32" || cls == "Vim";
         }
 
-        private void TryExtract(Point pt, bool force, int gen)
+        private void TryExtract(Point pt, bool force, int gen, bool direct)
         {
-            Log("TryExtract force=" + force + " enable=" + _config.EnableSelection + " gen=" + gen);
+            Log("TryExtract force=" + force + " direct=" + direct + " enable=" + _config.EnableSelection + " gen=" + gen);
             if (!force && !_config.EnableSelection) return;
             IntPtr fg = NativeMethods.GetForegroundWindow();
             if (fg == IntPtr.Zero || IsOwnWindow(fg))
@@ -440,10 +444,10 @@ namespace LLMTranslation
                 text = ClipboardSelectionText(gen);
             }
             if (gen != _extractGen) return;
-            FinishExtract(text, pt, cls);
+            FinishExtract(text, pt, cls, direct);
         }
 
-        private void FinishExtract(string text, Point pt, string cls)
+        private void FinishExtract(string text, Point pt, string cls, bool direct)
         {
             Log("text=" + (text == null ? "null" : text.Length.ToString()));
             if (text == null) return;
@@ -457,6 +461,15 @@ namespace LLMTranslation
             // 窗口显示必须在 UI 线程 (用 SynchronizationContext.Post, 不依赖胶囊句柄是否已创建)
             _uiCtx.Post(delegate(object state)
             {
+                if (direct)
+                {
+                    // 热键路径: 直接开翻译窗 (等价于用户点了胶囊), 不弹胶囊
+                    _floating.HidePopup();
+                    Log("hotkey direct translate");
+                    try { _translate.ShowTranslate(_config, _pendingText, Cursor.Position); }
+                    catch (Exception ex) { Log("hotkey translate error: " + ex); }
+                    return;
+                }
                 if (_config.ButtonDelay > 0) { _popupTimer.Stop(); _popupTimer.Interval = _config.ButtonDelay; _popupTimer.Start(); }
                 else _floating.Popup(pt);
             }, null);

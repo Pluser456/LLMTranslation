@@ -218,6 +218,78 @@ static class AutoTest
         }
         else Console.WriteLine("copy-to-clipboard => SKIPPED (no translate window)");
 
+        // 热键直翻: 划词 → 按全局热键 (从 config.json 读实际值) → 翻译窗应直接出现, 且不弹胶囊。
+        // 前置: 翻译窗必须先关掉 (否则分不清"新弹出"还是"本来就开着")
+        IntPtr tr4 = FindWindow(null, "LLM 划词翻译");
+        if (tr4 != IntPtr.Zero && IsWindowVisible(tr4))
+        {
+            if (IsIconic(tr4)) { ShowWindow(tr4, 9); PumpSleep(300); }
+            ForceForeground(tr4); PumpSleep(300);
+            keybd_event(0x1B, 0, 0, UIntPtr.Zero); keybd_event(0x1B, 0, 2, UIntPtr.Zero);   // Esc 关翻译窗
+            PumpSleep(600);
+        }
+        IntPtr tr5 = FindWindow(null, "LLM 划词翻译");
+        bool trGone = tr5 == IntPtr.Zero || !IsWindowVisible(tr5);
+        if (!trGone)
+        {
+            Console.WriteLine("hotkey-direct => SKIPPED (翻译窗未能关闭, 无法判定)");
+        }
+        else
+        {
+            // 从 config.json 读实际热键 (默认 Alt+Q)
+            string hot = "Alt+Q";
+            try
+            {
+                string cfgPath = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LLMTranslation", "config.json");
+                string cfg = System.IO.File.ReadAllText(cfgPath);
+                var m = System.Text.RegularExpressions.Regex.Match(cfg, "\"Hotkey\"\\s*:\\s*\"([^\"]*)\"");
+                if (m.Success && m.Groups[1].Value.Length > 0) hot = m.Groups[1].Value;
+            }
+            catch { }
+            int mods = 0, vk = 0;
+            string[] hp = hot.Split('+');
+            for (int i = 0; i < hp.Length - 1; i++)
+            {
+                string mm = hp[i].Trim().ToLower();
+                if (mm == "alt") mods |= 1; else if (mm == "ctrl" || mm == "control") mods |= 2;
+                else if (mm == "shift") mods |= 4; else if (mm == "win" || mm == "cmd") mods |= 8;
+            }
+            string hk = hp[hp.Length - 1].Trim();
+            if (hk.Length == 1) vk = (int)char.ToUpper(hk[0]);
+            else if (hk.Length > 1 && (hk[0] == 'F' || hk[0] == 'f')) { int fn; if (int.TryParse(hk.Substring(1), out fn) && fn >= 1 && fn <= 24) vk = 111 + fn; }
+            bool sent = vk > 0;
+            // 划词 + 热键
+            ForceForeground(tgt); PumpSleep(300);
+            RECT th; GetWindowRect(tgt, out th);
+            ResetClick(th); PumpSleep(200);
+            DragSelect(th, th.Top + 150, th.Left + 260);
+            PumpSleep(400);   // 等选区稳定 (避免 mouseup 拖尾干扰热键路径)
+            if (sent)
+            {
+                if ((mods & 2) != 0) keybd_event(0x11, 0, 0, UIntPtr.Zero);   // Ctrl down
+                if ((mods & 4) != 0) keybd_event(0x10, 0, 0, UIntPtr.Zero);   // Shift down
+                if ((mods & 1) != 0) keybd_event(0x12, 0, 0, UIntPtr.Zero);   // Alt down
+                keybd_event((byte)vk, 0, 0, UIntPtr.Zero);
+                keybd_event((byte)vk, 0, 2, UIntPtr.Zero);
+                if ((mods & 1) != 0) keybd_event(0x12, 0, 2, UIntPtr.Zero);
+                if ((mods & 4) != 0) keybd_event(0x10, 0, 2, UIntPtr.Zero);
+                if ((mods & 2) != 0) keybd_event(0x11, 0, 2, UIntPtr.Zero);
+            }
+            // 等翻译窗 (取词+开窗, 上限 4s); 胶囊不应可见
+            IntPtr trNew = IntPtr.Zero;
+            var sw2 = Stopwatch.StartNew();
+            while (sw2.ElapsedMilliseconds < 4000)
+            {
+                trNew = FindWindow(null, "LLM 划词翻译");
+                if (trNew != IntPtr.Zero && IsWindowVisible(trNew)) break;
+                PumpSleep(100);
+            }
+            IntPtr capH = FindWindow(null, "LLMT_FLOAT");
+            bool capVis = capH != IntPtr.Zero && IsWindowVisible(capH);
+            bool ok = sent && trNew != IntPtr.Zero && IsWindowVisible(trNew) && !capVis;
+            Console.WriteLine("hotkey-direct => " + (ok ? "PASS" : "FAIL") + " | hotkey=" + hot + " sent=" + sent + " translateVis=" + (trNew != IntPtr.Zero && IsWindowVisible(trNew)) + " capsuleVis=" + capVis);
+        }
+
         return 0;
     }
 }
