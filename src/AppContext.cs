@@ -121,12 +121,12 @@ namespace LLMTranslation
             if (firstRun)
             {
                 // 不用模态 MessageBox (被其他窗口挡住时会锁死整个应用), 直接非模态打开设置; 仅首次运行置顶
-                OpenSettings();
+                OpenDialog("set");
                 if (_dialog != null) { _dialog.TopMost = true; _dialog.BringToFront(); _dialog.Activate(); }
             }
         }
 
-        private const string BuildTag = "v13cln1";    // v12dpi + 翻译窗真最小化到任务栏 (exe 内嵌图标 + WM_SETICON 双保险)
+        private const string BuildTag = "v13cln2";    // v12dpi + 翻译窗真最小化到任务栏 (exe 内嵌图标 + WM_SETICON 双保险)
         private static readonly bool DebugLog = Environment.GetEnvironmentVariable("LLMTRANSLATION_DEBUG") == "1";
         // 调试日志开关: 环境变量 LLMTRANSLATION_DEBUG=1, 或数据目录存在 debug.txt 文件 (删掉文件即关闭)
         private static readonly string DebugFlagFile = Path.Combine(
@@ -288,11 +288,6 @@ namespace LLMTranslation
             _dialog.Show();
             _dialog.BringToFront();
             _dialog.Activate();
-        }
-
-        private void OpenSettings()
-        {
-            OpenDialog("set");
         }
 
         private void InstallHook()
