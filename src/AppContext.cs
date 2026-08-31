@@ -34,6 +34,7 @@ namespace LLMTranslation
 
         private NativeMethods.LowLevelMouseProc _hookProc;
         private IntPtr _hookPtr = IntPtr.Zero;
+        private int _lastHookTick;   // 钩子最近一次收到鼠标事件的时刻 (看门狗用)
         private WinTimer _extractTimer;
         private Point _downPoint;
         private IntPtr _downFg;
@@ -93,12 +94,16 @@ namespace LLMTranslation
             SetupTray();
             InstallHook();
 
-            // 钩子看门狗: 每 30s 重装一次低级钩子, 防止系统因超时静默摘除后永久失效
+            // 钩子看门狗: 系统因回调超时会静默摘除低级钩子 (指针值不变, 无法直接检测),
+            // 因此用"活性"判断: 钩子存活期间任何鼠标移动/点击都会产生回调。若超过 5 分钟
+            // 连一个事件都没有, 极可能已被摘除 => 重装。钩子健康时不重装, 避免每 5s 一次
+            // 的无谓重装与日志洪水; 空闲超 5 分钟多装一次是无害的。
             _hookWatchdog = new WinTimer();
             _hookWatchdog.Interval = 5000;
             _hookWatchdog.Tick += delegate
             {
-                ReinstallHook();
+                int idle = unchecked(Environment.TickCount - _lastHookTick);
+                if (idle > 300000) ReinstallHook();
             };
             _hookWatchdog.Start();
 
@@ -126,7 +131,7 @@ namespace LLMTranslation
             }
         }
 
-        private const string BuildTag = "v13cln2";    // v12dpi + 翻译窗真最小化到任务栏 (exe 内嵌图标 + WM_SETICON 双保险)
+        private const string BuildTag = "v13wdg1";    // v12dpi + 翻译窗真最小化到任务栏 (exe 内嵌图标 + WM_SETICON 双保险)
         private static readonly bool DebugLog = Environment.GetEnvironmentVariable("LLMTRANSLATION_DEBUG") == "1";
         // 调试日志开关: 环境变量 LLMTRANSLATION_DEBUG=1, 或数据目录存在 debug.txt 文件 (删掉文件即关闭)
         private static readonly string DebugFlagFile = Path.Combine(
@@ -296,6 +301,7 @@ namespace LLMTranslation
             {
                 _hookProc = MouseHookProc;
                 _hookPtr = NativeMethods.SetWindowsHookEx(NativeMethods.WH_MOUSE_LL, _hookProc, NativeMethods.GetModuleHandle(null), 0);
+                _lastHookTick = Environment.TickCount;
                 AppContext.Log("InstallHook ptr=0x" + _hookPtr.ToString("x") + " build=" + BuildTag);
             }
             catch { }
@@ -308,7 +314,8 @@ namespace LLMTranslation
             {
                 if (_hookPtr != IntPtr.Zero) { NativeMethods.UnhookWindowsHookEx(_hookPtr); _hookPtr = IntPtr.Zero; }
                 _hookPtr = NativeMethods.SetWindowsHookEx(NativeMethods.WH_MOUSE_LL, _hookProc, NativeMethods.GetModuleHandle(null), 0);
-                AppContext.Log("hook reinstalled ptr=0x" + _hookPtr.ToString("x"));
+                _lastHookTick = Environment.TickCount;
+                AppContext.Log("hook reinstalled (5min+ no events) ptr=0x" + _hookPtr.ToString("x"));
             }
             catch { }
         }
@@ -317,6 +324,7 @@ namespace LLMTranslation
         {
             if (nCode >= 0)
             {
+                _lastHookTick = Environment.TickCount;   // 钩子仍存活的证据 (看门狗活性判断)
                 int msg = (int)wParam;
                 NativeMethods.MSLLHOOKSTRUCT info = (NativeMethods.MSLLHOOKSTRUCT)Marshal.PtrToStructure(lParam, typeof(NativeMethods.MSLLHOOKSTRUCT));
                 Point pt = new Point(info.pt.x, info.pt.y);
