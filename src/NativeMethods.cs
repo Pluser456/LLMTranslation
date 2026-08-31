@@ -121,6 +121,8 @@ namespace LLMTranslation
         public static extern uint GetDpiForSystem();   // 系统当前真实 DPI (与进程感知的锁定值无关)
         [DllImport("user32.dll")]
         public static extern int GetProcessDpiAwarenessContext(int unaware);   // 0=不感知 1=系统感知 2=逐监视器 3=逐监视器v2
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern bool SetProcessDpiAwarenessContext(IntPtr ctx);   // 设置进程 DPI 感知: -1=系统感知 -2=PM -4=PMv2
 
         [StructLayout(LayoutKind.Sequential)]
         public struct POINT { public int x; public int y; }

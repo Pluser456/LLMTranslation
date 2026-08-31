@@ -59,13 +59,14 @@ namespace LLMTranslation
 
         public TranslateForm()
         {
-            this.AutoScaleMode = AutoScaleMode.Dpi;
-            this.AutoScaleDimensions = new SizeF(96F, 96F);
+            // None: 尺寸统一由 Dpi.Scale 手动计算; 若用 Dpi 模式, DPI 感知进程下 WinForms 会再乘一次 1.25 (双重缩放)
+            this.AutoScaleMode = AutoScaleMode.None;
             FormBorderStyle = FormBorderStyle.None;
             ShowInTaskbar = false;
             StartPosition = FormStartPosition.Manual;
-            Size = new Size(520, 400);
-            MinimumSize = new Size(320, 240);
+            float s = Dpi.Scale;
+            Size = new Size((int)(520 * s), (int)(400 * s));
+            MinimumSize = new Size((int)(320 * s), (int)(240 * s));
             TopMost = true;
             KeyPreview = true;
             DoubleBuffered = true;

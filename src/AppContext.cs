@@ -128,7 +128,7 @@ namespace LLMTranslation
             }
         }
 
-        private const string BuildTag = "v11log2";   // v11 行为 + 窗口状态/WebView2 生命周期诊断日志
+        private const string BuildTag = "v12dpi";    // v11log2 + 启动钉死 PMv2 感知 + TranslateForm 去双重缩放
         private static readonly bool DebugLog = Environment.GetEnvironmentVariable("LLMTRANSLATION_DEBUG") == "1";
         // 调试日志开关: 环境变量 LLMTRANSLATION_DEBUG=1, 或数据目录存在 debug.txt 文件 (删掉文件即关闭)
         private static readonly string DebugFlagFile = Path.Combine(
