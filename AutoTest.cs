@@ -69,8 +69,11 @@ static class AutoTest
         Thread.Sleep(300); // 等绘制
         RECT r; GetWindowRect(h, out r);
         int cx = (r.Left + r.Right) / 2, cy = (r.Top + r.Bottom) / 2;
-        Color c = Pixel(cx, cy);
-        detail = string.Format("rect=({0},{1},{2},{3}) center=({4},{5}) px={6}", r.Left, r.Top, r.Right, r.Bottom, cx, cy, c);
+        // 探针点: 胶囊宽 1/3 处 ("A"与"翻译"之间的留白列), 避开字形笔画;
+        // 旧版中心点探针在 17.5px 字号下正好落在"翻"字笔画上导致误报 BLANK
+        int px_ = r.Left + (r.Right - r.Left) / 3;
+        Color c = Pixel(px_, cy);
+        detail = string.Format("rect=({0},{1},{2},{3}) probe=({4},{5}) px={6}", r.Left, r.Top, r.Right, r.Bottom, px_, cy, c);
         return IsWhite(c) ? 1 : 2;
     }
 
