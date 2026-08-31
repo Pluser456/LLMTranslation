@@ -302,7 +302,6 @@ namespace LLMTranslation
         }
 
         // ---- WebView2 ----
-        public void WarmUp() { StartWeb(); }   // 启动时预热 WebView2, 首次打开翻译窗无冷启动
 
         private void StartWeb()
         {
