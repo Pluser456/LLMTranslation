@@ -17,8 +17,8 @@ namespace LLMTranslation
             TopMost = true;
             StartPosition = FormStartPosition.Manual;
             // 胶囊固定 100% 设计尺寸 (98×40), 不随系统缩放放大:
-            // 旧版(不感知进程)在本系统上就是 1:1 物理渲染, 用户习惯紧凑胶囊; 实测旧胶囊物理 96×38。
-            // 高缩放下放大 25% 后用户明显感到"变大了", 故钉死尺寸与字体(固定像素)。
+            // 实测旧版在本系统上就是 98×40 物理 1:1 + pt 字体按真实 120dpi 渲染的大字;
+            // 窗口尺寸钉死, 字体保持 pt 声明按真实 DPI 换算, 与旧版像素级一致。
             Size = new Size(98, 40);
             DoubleBuffered = true;
             BackColor = Color.Magenta;
@@ -75,16 +75,18 @@ namespace LLMTranslation
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
             g.Clear(TransparencyKey);   // 关键色透明
-            // 固定像素字体 (10.5pt@96dpi=14px 等): 不随系统 DPI 自动放大, 与旧版物理渲染完全一致
+            // 字体保持 pt 声明: 实测旧版(不感知)在本系统上窗口 DC 报真实 120dpi,
+            // pt→px 按 120 换算(10.5pt=17.5px)——即用户熟悉的"小胶囊配大字"。
+            // 感知进程同样按真实 DPI 换算, 像素级一致; 100% 机器上则回到 14px 原始设计。
             Rectangle r = new Rectangle(0, 0, 97, 39);
             using (GraphicsPath path = RoundRect(r, 9))
             {
                 using (SolidBrush brush = new SolidBrush(Color.White)) g.FillPath(brush, path);
                 using (Pen pen = new Pen(Color.FromArgb(210, 210, 210))) g.DrawPath(pen, path);
             }
-            using (Font f1 = new Font("Microsoft YaHei UI", 10.5f * 96f / 72f, FontStyle.Bold, GraphicsUnit.Pixel))
-            using (Font f2 = new Font("Microsoft YaHei UI", 8.5f * 96f / 72f, FontStyle.Bold, GraphicsUnit.Pixel))
-            using (Font f3 = new Font("Microsoft YaHei UI", 11f * 96f / 72f, FontStyle.Regular, GraphicsUnit.Pixel))
+            using (Font f1 = new Font("Microsoft YaHei UI", 10.5f, FontStyle.Bold))
+            using (Font f2 = new Font("Microsoft YaHei UI", 8.5f, FontStyle.Bold))
+            using (Font f3 = new Font("Microsoft YaHei UI", 11f, FontStyle.Regular))
             using (SolidBrush fg = new SolidBrush(Color.FromArgb(60, 60, 60)))
             {
                 g.DrawString("文", f1, fg, 8, 4);
