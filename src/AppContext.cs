@@ -167,7 +167,7 @@ namespace LLMTranslation
         }
 
         private const string RunDepsVersion = "1";   // 内嵌 WebView2 依赖包版本 (变更时 +1 触发重新解包)
-        private const string WebAssetsVersion = "7"; // 内嵌 web 资源版本 (变更时 +1 触发重新解包)
+        private const string WebAssetsVersion = "8"; // 内嵌 web 资源版本 (变更时 +1 触发重新解包)
 
         private static bool ExtractZipIfChanged(string resName, string targetDir, string version)
         {
