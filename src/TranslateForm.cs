@@ -57,6 +57,19 @@ namespace LLMTranslation
             return "自动";
         }
 
+        // WinForms 不给无边框窗加 WS_MINIMIZEBOX/WS_SYSMENU, 而资源管理器"点活动窗口任务栏按钮→最小化"
+        // 的切换行为依赖这两个样式位 (实测缺位时二次点击无效)。在 CreateParams 层补齐,
+        // 才能活过 WinForms 的属性变更样式重算 (OnHandleCreated 里 SetWindowLong 会被洗掉)。
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                CreateParams cp = base.CreateParams;
+                cp.Style |= NativeMethods.WS_MINIMIZEBOX | NativeMethods.WS_SYSMENU;
+                return cp;
+            }
+        }
+
         public TranslateForm()
         {
             // None: 尺寸统一由 Dpi.Scale 手动计算; 若用 Dpi 模式, DPI 感知进程下 WinForms 会再乘一次 1.25 (双重缩放)
@@ -202,14 +215,6 @@ namespace LLMTranslation
         protected override void OnHandleCreated(EventArgs e)
         {
             base.OnHandleCreated(e);
-            // 无边框窗默认无 WS_MINIMIZEBOX: 补齐后 WindowState=Minimized 才能以带图标的任务栏按钮形式最小化
-            try
-            {
-                int st = NativeMethods.GetWindowLong(this.Handle, NativeMethods.GWL_STYLE);
-                NativeMethods.SetWindowLong(this.Handle, NativeMethods.GWL_STYLE,
-                    st | NativeMethods.WS_MINIMIZEBOX | NativeMethods.WS_SYSMENU);
-            }
-            catch { }
             // FormBorderStyle=None 时 WinForms 不会把 Form.Icon 发到窗口 (跳过/清空 WM_SETICON),
             // 任务栏按钮只能回退到 exe 默认图标。手动补发三种尺寸槽位, 强制用托盘同款"译"图标 (OnShown 再补一次防 UpdateIcon 清空)。
             ApplyWindowIcon();
