@@ -73,21 +73,23 @@ namespace LLMTranslation
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
             g.Clear(TransparencyKey);   // 关键色透明
-            g.ScaleTransform(Dpi.Scale, Dpi.Scale);
-            Rectangle r = new Rectangle(0, 0, 97, 39);
-            using (GraphicsPath path = RoundRect(r, 9))
+            // DPI 感知进程: POINT 字体自动按 120dpi 放大(物理尺寸=原位图时代), 布局常量手动 × Dpi.Scale;
+            // 不再叠加 ScaleTransform (会与字体自动放大双重缩放)
+            float s = Dpi.Scale;
+            Rectangle r = new Rectangle(0, 0, (int)Math.Round(97 * s), (int)Math.Round(39 * s));
+            using (GraphicsPath path = RoundRect(r, (int)Math.Round(9 * s)))
             {
                 using (SolidBrush brush = new SolidBrush(Color.White)) g.FillPath(brush, path);
-                using (Pen pen = new Pen(Color.FromArgb(210, 210, 210))) g.DrawPath(pen, path);
+                using (Pen pen = new Pen(Color.FromArgb(210, 210, 210), (float)(1 * s))) g.DrawPath(pen, path);
             }
             using (Font f1 = new Font("Microsoft YaHei UI", 10.5f, FontStyle.Bold))
             using (Font f2 = new Font("Microsoft YaHei UI", 8.5f, FontStyle.Bold))
             using (Font f3 = new Font("Microsoft YaHei UI", 11f, FontStyle.Regular))
             using (SolidBrush fg = new SolidBrush(Color.FromArgb(60, 60, 60)))
             {
-                g.DrawString("文", f1, fg, 8, 4);
-                g.DrawString("A", f2, fg, 18, 17);
-                g.DrawString("翻译", f3, fg, 42, 9);
+                g.DrawString("文", f1, fg, (int)(8 * s), (int)(4 * s));
+                g.DrawString("A", f2, fg, (int)(18 * s), (int)(17 * s));
+                g.DrawString("翻译", f3, fg, (int)(42 * s), (int)(9 * s));
             }
             base.OnPaint(e);
         }

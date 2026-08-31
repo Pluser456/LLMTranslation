@@ -92,18 +92,18 @@ namespace LLMTranslation
 
             // ---- 复制成功 toast ----
             toast = new Panel();
-            toast.Size = new Size(150, 36);
+            toast.Size = new Size((int)(150 * s), (int)(36 * s));   // s = Dpi.Scale (窗口尺寸同源)
             toast.BackColor = Color.White;
             Label lblCheck = new Label();
             lblCheck.Text = "✓";
             lblCheck.ForeColor = Color.FromArgb(40, 170, 90);
-            lblCheck.Font = new Font("Microsoft YaHei UI", 11f, FontStyle.Bold);
+            lblCheck.Font = new Font("Microsoft YaHei UI", 11f, FontStyle.Bold);   // POINT 字体自动随 DPI 缩放
             lblCheck.AutoSize = true;
-            lblCheck.Location = new Point(14, 8);
+            lblCheck.Location = new Point((int)(14 * s), (int)(8 * s));
             lblToast = new Label();
             lblToast.Text = "复制成功";
             lblToast.AutoSize = true;
-            lblToast.Location = new Point(38, 10);
+            lblToast.Location = new Point((int)(38 * s), (int)(10 * s));
             toast.Controls.Add(lblCheck);
             toast.Controls.Add(lblToast);
             toast.Visible = false;

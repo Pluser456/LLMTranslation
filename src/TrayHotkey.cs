@@ -31,11 +31,14 @@ namespace LLMTranslation
         private readonly List<Item> _items = new List<Item>();
         private readonly List<Rectangle> _rects = new List<Rectangle>();
         private readonly Font _font;
+        private readonly float _s;
         private int _hover = -1, _press = -1;
 
         public TrayMenuForm(float fontPx)
         {
-            _font = new Font("Microsoft YaHei UI", fontPx, GraphicsUnit.Pixel);
+            // DPI 感知进程: 设计像素布局统一 × Dpi.Scale (字体与所有布局常量同步), 物理尺寸与原 100% 时代一致
+            _s = Dpi.Scale;
+            _font = new Font("Microsoft YaHei UI", fontPx * _s, GraphicsUnit.Pixel);
             FormBorderStyle = FormBorderStyle.None;
             ShowInTaskbar = false;
             TopMost = true;
@@ -55,22 +58,23 @@ namespace LLMTranslation
 
         public void Prepare()
         {
-            int contentW = 0, y = 6;
+            float s = _s;
+            int contentW = 0, y = (int)(6 * s);
             _rects.Clear();
             var sizes = new List<Size>();
             foreach (var it in _items)
             {
-                if (it.Sep) { sizes.Add(new Size(0, 11)); continue; }
-                Size s = TextRenderer.MeasureText(it.Text, _font);
-                sizes.Add(s);
-                if (s.Width + 32 > contentW) contentW = s.Width + 32;
+                if (it.Sep) { sizes.Add(new Size(0, (int)(11 * s))); continue; }
+                Size ms = TextRenderer.MeasureText(it.Text, _font);
+                sizes.Add(ms);
+                if (ms.Width + (int)(32 * s) > contentW) contentW = ms.Width + (int)(32 * s);
             }
             for (int i = 0; i < _items.Count; i++)
             {
-                if (_items[i].Sep) { _rects.Add(new Rectangle(4, y, 0, 11)); y += 11; }
-                else { int ih = sizes[i].Height + 14; _rects.Add(new Rectangle(4, y, contentW, ih)); y += ih; }
+                if (_items[i].Sep) { _rects.Add(new Rectangle((int)(4 * s), y, 0, (int)(11 * s))); y += (int)(11 * s); }
+                else { int ih = sizes[i].Height + (int)(14 * s); _rects.Add(new Rectangle((int)(4 * s), y, contentW, ih)); y += ih; }
             }
-            this.Size = new Size(contentW + 8, y + 8);
+            this.Size = new Size(contentW + (int)(8 * s), y + (int)(8 * s));
         }
 
         public void ShowAtCursor()
@@ -110,14 +114,15 @@ namespace LLMTranslation
             var g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.Clear(Color.FromArgb(252, 252, 252));
+            float s = _s;
             for (int i = 0; i < _items.Count; i++)
             {
                 var r = _rects[i];
                 if (_items[i].Sep)
-                { using (var p = new Pen(Color.FromArgb(217, 217, 217))) g.DrawLine(p, 12, r.Y + r.Height / 2, Width - 12, r.Y + r.Height / 2); continue; }
+                { using (var p = new Pen(Color.FromArgb(217, 217, 217))) g.DrawLine(p, (int)(12 * s), r.Y + r.Height / 2, Width - (int)(12 * s), r.Y + r.Height / 2); continue; }
                 if (i == _hover)
-                { using (var path = Round(new Rectangle(r.X, r.Y + 1, r.Width, r.Height - 2), 5)) using (var b = new SolidBrush(_press == i ? Color.FromArgb(228, 228, 228) : Color.FromArgb(238, 238, 238))) g.FillPath(b, path); }
-                TextRenderer.DrawText(g, _items[i].Text, _font, new Rectangle(r.X + 16, r.Y, r.Width - 32, r.Height), Color.FromArgb(26, 26, 26),
+                { using (var path = Round(new Rectangle(r.X, r.Y + (int)(1 * s), r.Width, r.Height - (int)(2 * s)), (int)(5 * s))) using (var b = new SolidBrush(_press == i ? Color.FromArgb(228, 228, 228) : Color.FromArgb(238, 238, 238))) g.FillPath(b, path); }
+                TextRenderer.DrawText(g, _items[i].Text, _font, new Rectangle(r.X + (int)(16 * s), r.Y, r.Width - (int)(32 * s), r.Height), Color.FromArgb(26, 26, 26),
                     TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.EndEllipsis);
             }
         }
