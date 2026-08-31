@@ -16,8 +16,10 @@ namespace LLMTranslation
             ShowInTaskbar = false;
             TopMost = true;
             StartPosition = FormStartPosition.Manual;
-            float s = Dpi.Scale;
-            Size = new Size((int)Math.Round(98 * s), (int)Math.Round(40 * s));
+            // 胶囊固定 100% 设计尺寸 (98×40), 不随系统缩放放大:
+            // 旧版(不感知进程)在本系统上就是 1:1 物理渲染, 用户习惯紧凑胶囊; 实测旧胶囊物理 96×38。
+            // 高缩放下放大 25% 后用户明显感到"变大了", 故钉死尺寸与字体(固定像素)。
+            Size = new Size(98, 40);
             DoubleBuffered = true;
             BackColor = Color.Magenta;
             TransparencyKey = Color.Magenta;   // 关键色透明, 跨设备稳定(不依赖分层窗口)
@@ -73,23 +75,21 @@ namespace LLMTranslation
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
             g.Clear(TransparencyKey);   // 关键色透明
-            // DPI 感知进程: POINT 字体自动按 120dpi 放大(物理尺寸=原位图时代), 布局常量手动 × Dpi.Scale;
-            // 不再叠加 ScaleTransform (会与字体自动放大双重缩放)
-            float s = Dpi.Scale;
-            Rectangle r = new Rectangle(0, 0, (int)Math.Round(97 * s), (int)Math.Round(39 * s));
-            using (GraphicsPath path = RoundRect(r, (int)Math.Round(9 * s)))
+            // 固定像素字体 (10.5pt@96dpi=14px 等): 不随系统 DPI 自动放大, 与旧版物理渲染完全一致
+            Rectangle r = new Rectangle(0, 0, 97, 39);
+            using (GraphicsPath path = RoundRect(r, 9))
             {
                 using (SolidBrush brush = new SolidBrush(Color.White)) g.FillPath(brush, path);
-                using (Pen pen = new Pen(Color.FromArgb(210, 210, 210), (float)(1 * s))) g.DrawPath(pen, path);
+                using (Pen pen = new Pen(Color.FromArgb(210, 210, 210))) g.DrawPath(pen, path);
             }
-            using (Font f1 = new Font("Microsoft YaHei UI", 10.5f, FontStyle.Bold))
-            using (Font f2 = new Font("Microsoft YaHei UI", 8.5f, FontStyle.Bold))
-            using (Font f3 = new Font("Microsoft YaHei UI", 11f, FontStyle.Regular))
+            using (Font f1 = new Font("Microsoft YaHei UI", 10.5f * 96f / 72f, FontStyle.Bold, GraphicsUnit.Pixel))
+            using (Font f2 = new Font("Microsoft YaHei UI", 8.5f * 96f / 72f, FontStyle.Bold, GraphicsUnit.Pixel))
+            using (Font f3 = new Font("Microsoft YaHei UI", 11f * 96f / 72f, FontStyle.Regular, GraphicsUnit.Pixel))
             using (SolidBrush fg = new SolidBrush(Color.FromArgb(60, 60, 60)))
             {
-                g.DrawString("文", f1, fg, (int)(8 * s), (int)(4 * s));
-                g.DrawString("A", f2, fg, (int)(18 * s), (int)(17 * s));
-                g.DrawString("翻译", f3, fg, (int)(42 * s), (int)(9 * s));
+                g.DrawString("文", f1, fg, 8, 4);
+                g.DrawString("A", f2, fg, 18, 17);
+                g.DrawString("翻译", f3, fg, 42, 9);
             }
             base.OnPaint(e);
         }
