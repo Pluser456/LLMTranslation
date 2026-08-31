@@ -22,7 +22,6 @@ namespace LLMTranslation
         private Config _config;
         private FloatingButtonForm _floating;
         private TranslateForm _translate;
-        private SettingsForm _settings;
         private HotkeyWindow _hotkeyWin;
         private WinTimer _popupTimer;
         private WinTimer _hookWatchdog;
@@ -127,7 +126,7 @@ namespace LLMTranslation
             }
         }
 
-        private const string BuildTag = "v13min4";    // v12dpi + 翻译窗真最小化到任务栏 (exe 内嵌图标 + WM_SETICON 双保险)
+        private const string BuildTag = "v13cln1";    // v12dpi + 翻译窗真最小化到任务栏 (exe 内嵌图标 + WM_SETICON 双保险)
         private static readonly bool DebugLog = Environment.GetEnvironmentVariable("LLMTRANSLATION_DEBUG") == "1";
         // 调试日志开关: 环境变量 LLMTRANSLATION_DEBUG=1, 或数据目录存在 debug.txt 文件 (删掉文件即关闭)
         private static readonly string DebugFlagFile = Path.Combine(

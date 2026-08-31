@@ -24,13 +24,6 @@ namespace LLMTranslation
                 return _s;
             }
         }
-
-        // 强制重算 (屏幕缩放可能已变, 缓存失效)
-        public static float Recompute()
-        {
-            _s = 0f;
-            return Scale;
-        }
     }
 
 }
