@@ -11,10 +11,10 @@ namespace LLMTranslation
     [DataContract]
     public class Config
     {
-        [DataMember] public string ApiBase = "https://api.openai.com/v1";
+        [DataMember] public string ApiBase = "https://api.deepseek.com/v1";   // 默认 DeepSeek (OpenAI 兼容接口)
         [DataMember] public string Port = "";
         [DataMember] public string ApiKey = "";
-        [DataMember] public string Model = "gpt-4o-mini";
+        [DataMember] public string Model = "deepseek-v4-flash";
         [DataMember] public string Prompt = "你是一个翻译器。请自动识别用户文本的语言：如果是中文，翻译成英文；否则翻译成中文。只输出翻译结果，不要任何解释。使用 Markdown 格式输出，数学公式使用 LaTeX 语法（行内用 $...$，独立公式用 $$...$$）。";
         [DataMember] public bool EnableSelection = true;
         [DataMember] public bool AutoStart = false;
@@ -54,10 +54,10 @@ namespace LLMTranslation
                         {
                             Config c = (Config)obj;
                             // DCS 反序列化不走字段初始化器, 缺失字段为 0/null, 这里统一sanitize
-                            if (c.ApiBase == null) c.ApiBase = "https://api.openai.com/v1";
+                            if (c.ApiBase == null) c.ApiBase = "https://api.deepseek.com/v1";
                             if (c.Port == null) c.Port = "";
                             if (c.ApiKey == null) c.ApiKey = "";
-                            if (c.Model == null) c.Model = "gpt-4o-mini";
+                            if (c.Model == null) c.Model = "deepseek-v4-flash";
                             if (c.Prompt == null) c.Prompt = new Config().Prompt;
                             if (c.FontSize < 8 || c.FontSize > 28) c.FontSize = 15;
                             if (string.IsNullOrEmpty(c.SourceLang)) c.SourceLang = "auto";
