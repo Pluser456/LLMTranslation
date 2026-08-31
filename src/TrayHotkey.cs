@@ -121,13 +121,11 @@ namespace LLMTranslation
                 if (_items[i].Sep)
                 { using (var p = new Pen(Color.FromArgb(217, 217, 217))) g.DrawLine(p, (int)(12 * s), r.Y + r.Height / 2, Width - (int)(12 * s), r.Y + r.Height / 2); continue; }
                 if (i == _hover)
-                { using (var path = Round(new Rectangle(r.X, r.Y + (int)(1 * s), r.Width, r.Height - (int)(2 * s)), (int)(5 * s))) using (var b = new SolidBrush(_press == i ? Color.FromArgb(228, 228, 228) : Color.FromArgb(238, 238, 238))) g.FillPath(b, path); }
+                { using (var path = FloatingButtonForm.RoundRect(new Rectangle(r.X, r.Y + (int)(1 * s), r.Width, r.Height - (int)(2 * s)), (int)(5 * s))) using (var b = new SolidBrush(_press == i ? Color.FromArgb(228, 228, 228) : Color.FromArgb(238, 238, 238))) g.FillPath(b, path); }
                 TextRenderer.DrawText(g, _items[i].Text, _font, new Rectangle(r.X + (int)(16 * s), r.Y, r.Width - (int)(32 * s), r.Height), Color.FromArgb(26, 26, 26),
                     TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.EndEllipsis);
             }
         }
-        private static GraphicsPath Round(Rectangle r, int rad)
-        { var p = new GraphicsPath(); int d = rad * 2; p.AddArc(r.X, r.Y, d, d, 180, 90); p.AddArc(r.Right - d, r.Y, d, d, 270, 90); p.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90); p.AddArc(r.X, r.Bottom - d, d, d, 90, 90); p.CloseFigure(); return p; }
     }
 
 }

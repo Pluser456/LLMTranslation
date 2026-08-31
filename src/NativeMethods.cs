@@ -12,7 +12,6 @@ namespace LLMTranslation
         public const int WM_LBUTTONUP = 0x0202;
         public const int WM_LBUTTONDBLCLK = 0x0203;
         public const int WM_HOTKEY = 0x0312;
-        public const int MOD_ALT = 1;
         public const byte VK_CONTROL = 0x11;
         public const byte VK_C = 0x43;
         public const uint KEYEVENTF_KEYUP = 0x0002;

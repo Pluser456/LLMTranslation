@@ -162,7 +162,6 @@ namespace LLMTranslation
             toast.BringToFront();
             SizeChanged += delegate { LayoutCustom(); };
             LayoutCustom();
-            toast.Visible = false;
         }
 
         private Panel MkEdge(Cursor cur, int mask)
@@ -638,24 +637,10 @@ namespace LLMTranslation
                         }
                         else PushText(_sb.ToString(), true);   // 结束: 精排 Markdown+公式
                         PushState(false);
-                        WinTimer diagTimer = new WinTimer();
-                        diagTimer.Interval = 2500;
-                        diagTimer.Tick += delegate
-                        {
-                            diagTimer.Stop();
-                            diagTimer.Dispose();
-                            if (!_webFailed && _webReady)
-                            {
-                                try { _web.ExecuteScriptAsync("if(window.postDiag)postDiag()"); } catch { }
-                            }
-                        };
-                        diagTimer.Start();
                     });
                 },
                 token);
         }
     }
-
-    // ---------------- 设置窗口 ----------------
 }
 

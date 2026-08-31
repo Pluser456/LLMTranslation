@@ -119,6 +119,4 @@ namespace LLMTranslation
             Cursor = Cursors.Hand;
         }
     }
-
-    // ---------------- 翻译结果小窗 (Cherry Studio 风格) ----------------
 }
