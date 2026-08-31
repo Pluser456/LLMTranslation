@@ -128,7 +128,7 @@ namespace LLMTranslation
             }
         }
 
-        private const string BuildTag = "v11log2";   // v11 行为 + 窗口状态/WebView2 生命周期诊断日志
+        private const string BuildTag = "v12dpi";    // v11log2 + 启动钉死 PMv2 感知 + TranslateForm 去双重缩放
         private static readonly bool DebugLog = Environment.GetEnvironmentVariable("LLMTRANSLATION_DEBUG") == "1";
         // 调试日志开关: 环境变量 LLMTRANSLATION_DEBUG=1, 或数据目录存在 debug.txt 文件 (删掉文件即关闭)
         private static readonly string DebugFlagFile = Path.Combine(
@@ -232,7 +232,9 @@ namespace LLMTranslation
                 {
                     g.FillPath(brush, path);
                 }
-                using (Font f = new Font("Microsoft YaHei UI", 13f, FontStyle.Bold))
+                // 图标画布固定 32×32 (不随 DPI 缩放), 故字体用固定像素 = 13pt@96dpi, 保持与原 100% 时代相同的字形占比;
+                // 若用 POINT 字体, 感知进程下会自动放大, 字形相对图标变大
+                using (Font f = new Font("Microsoft YaHei UI", 13f * 96f / 72f, FontStyle.Bold, GraphicsUnit.Pixel))
                 using (SolidBrush fg = new SolidBrush(Color.White))
                 {
                     StringFormat sf = new StringFormat();

@@ -11,6 +11,11 @@ namespace LLMTranslation
         [STAThread]
         private static void Main()
         {
+            // 钉死进程 DPI 感知 (逐监视器 v2), 必须在任何窗口/WebView2 之前:
+            // 本系统 manifest dpiAware 不生效, 进程默认"不感知"启动, 窗口被 DWM 位图放大(模糊),
+            // 且运行中感知状态会被外部(疑 GameViewer 虚拟显示)切换, 导致窗口缩小/裁剪。
+            // 显式设为 PMv2 后: 窗口清晰且尺寸正确, WebView2 内部的同设置成为空操作, 状态不再漂移。
+            try { NativeMethods.SetProcessDpiAwarenessContext(new IntPtr(-4)); } catch { }
             bool created;
             Mutex mutex = new Mutex(true, "LLMTranslation_SingleInstance", out created);
             if (!created) return;

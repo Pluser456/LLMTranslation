@@ -16,8 +16,9 @@ namespace LLMTranslation
             ShowInTaskbar = false;
             TopMost = true;
             StartPosition = FormStartPosition.Manual;
-            float s = Dpi.Scale;
-            Size = new Size((int)Math.Round(98 * s), (int)Math.Round(40 * s));
+            // 胶囊固定 100% 设计尺寸 (98×40), 不随系统缩放放大;
+            // 字体同样钉死固定像素字号(见 OnPaint) → 任何缩放屏幕上观感完全一致。
+            Size = new Size(98, 40);
             DoubleBuffered = true;
             BackColor = Color.Magenta;
             TransparencyKey = Color.Magenta;   // 关键色透明, 跨设备稳定(不依赖分层窗口)
@@ -73,16 +74,18 @@ namespace LLMTranslation
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
             g.Clear(TransparencyKey);   // 关键色透明
-            g.ScaleTransform(Dpi.Scale, Dpi.Scale);
+            // 字体钉死为固定物理像素: 17.5/14.17/18.33px = 旧版(建分支前)在本机的观感
+            // (旧版不感知进程的窗口 DC 报真实 120dpi, 10.5/8.5/11pt 按 120 换算而来)。
+            // GraphicsUnit.Pixel 为字面设备像素, 不受进程 DPI 影响 → 任何缩放屏幕观感一致。
             Rectangle r = new Rectangle(0, 0, 97, 39);
             using (GraphicsPath path = RoundRect(r, 9))
             {
                 using (SolidBrush brush = new SolidBrush(Color.White)) g.FillPath(brush, path);
                 using (Pen pen = new Pen(Color.FromArgb(210, 210, 210))) g.DrawPath(pen, path);
             }
-            using (Font f1 = new Font("Microsoft YaHei UI", 10.5f, FontStyle.Bold))
-            using (Font f2 = new Font("Microsoft YaHei UI", 8.5f, FontStyle.Bold))
-            using (Font f3 = new Font("Microsoft YaHei UI", 11f, FontStyle.Regular))
+            using (Font f1 = new Font("Microsoft YaHei UI", 17.5f, FontStyle.Bold, GraphicsUnit.Pixel))
+            using (Font f2 = new Font("Microsoft YaHei UI", 14.17f, FontStyle.Bold, GraphicsUnit.Pixel))
+            using (Font f3 = new Font("Microsoft YaHei UI", 18.33f, FontStyle.Regular, GraphicsUnit.Pixel))
             using (SolidBrush fg = new SolidBrush(Color.FromArgb(60, 60, 60)))
             {
                 g.DrawString("文", f1, fg, 8, 4);
