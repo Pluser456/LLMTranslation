@@ -56,35 +56,4 @@ if %errorlevel% equ 0 (
   echo BUILD FAILED
   exit /b 1
 )
-
-rem ---- SFX 自解压安装包 (免管理员, 每用户安装) ----
-"%FW%\csc.exe" /nologo /optimize /target:winexe /out:dist\build\Uninst.exe ^
-  /win32manifest:src\app.manifest ^
-  /reference:System.dll ^
-  /reference:System.Windows.Forms.dll ^
-  installer\Uninst.cs
-
-if %errorlevel% neq 0 (
-  echo.
-  echo BUILD UNINST FAILED
-  exit /b 1
-)
-
-"%FW%\csc.exe" /nologo /optimize /target:winexe /out:dist\LLMTranslation-Setup.exe ^
-  /win32manifest:src\app.manifest ^
-  /win32icon:src\app.ico ^
-  /reference:System.dll ^
-  /reference:System.Windows.Forms.dll ^
-  /resource:dist\LLMTranslation.exe,payload ^
-  /resource:dist\build\Uninst.exe,uninst ^
-  installer\Installer.cs
-
-if %errorlevel% neq 0 (
-  echo.
-  echo BUILD SETUP FAILED
-  exit /b 1
-)
-
-echo.
-echo BUILD SETUP OK -^> dist\LLMTranslation-Setup.exe (self-extracting installer)
 endlocal

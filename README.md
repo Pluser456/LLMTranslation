@@ -84,17 +84,23 @@ build.bat
 | STranslate | ~100MB | 超过限制 |
 | **本工具** | **0.035MB** | 只做划词翻译这一件事 |
 
-## 打包与部署（单文件 / 安装包）
+## 打包与部署（单文件）
 
-`build.bat` 一次构建出三个产物：
+`build.bat` 一次构建出两个产物：
 
 | 产物 | 大小 | 说明 |
 |---|---|---|
 | `dist\LLMTranslation.exe` | ~659 KB | **单文件版**：复制到任意位置即可运行（桌面/优盘均可）。首次启动自动把内嵌的 web 前端与 WebView2 依赖解包到 `%LOCALAPPDATA%\LLMTranslation\` |
-| `dist\LLMTranslation-Setup.exe` | ~673 KB | **自解压安装包**（无需管理员）：安装到 `%LOCALAPPDATA%\Programs\LLMTranslation\`，创建桌面 + 开始菜单快捷方式，写入"添加/删除程序"条目，装完自动启动。支持参数 `/S` 静默、`/NOSTART` 装完不启动 |
 | `dist\TestTarget.exe` | - | 仅测试用，不用分发 |
 
-卸载：控制面板卸载，或运行安装目录里的 `Uninstall.exe`（会清理程序文件、快捷方式、注册表；`%LOCALAPPDATA%\LLMTranslation` 里的设置与 WebView2 缓存保留，重装沿用）。
+手动部署示例（管理员或普通用户均可，写入当前用户目录）：
+
+```powershell
+mkdir "$env:LOCALAPPDATA\Programs\LLMTranslation" -Force
+copy dist\LLMTranslation.exe "$env:LOCALAPPDATA\Programs\LLMTranslation\LLMTranslation.exe"
+```
+
+卸载：直接删除程序目录即可（`%LOCALAPPDATA%\LLMTranslation` 里的设置与 WebView2 缓存保留，重装沿用）。
 
 数据位置（与 exe 位置无关，跟着用户走）：
 
@@ -102,4 +108,4 @@ build.bat
 - 调试日志（设环境变量 `LLMTRANSLATION_DEBUG=1` 后生效）：`%LOCALAPPDATA%\LLMTranslation\log.txt`
 - WebView2 缓存：`%LOCALAPPDATA%\LLMTranslation\WebView2\`
 
-注意：单文件版与安装版共用同一个实例锁，同一时间只能跑一个。
+注意：同一时间只能运行一个实例（单实例锁）。
