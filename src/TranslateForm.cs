@@ -306,6 +306,10 @@ namespace LLMTranslation
         {
             if (_webInitStarted) return;
             _webInitStarted = true;
+            // 竞态修复 (设置/翻译窗二次打开白屏): WebView2 "热"时 env 续体 1ms 就回来,
+            // 可能早于窗口句柄创建; 而 Post/PostUI 的 BeginInvoke 需要句柄 → 续体被丢 →
+            // EnsureCoreWebView2Async 永不执行 → 白屏。在启动异步链之前强制同步创建句柄。
+            var h = Handle;
             try
             {
                 AppContext.Log("web(translate) env start shellDpi=" + NativeMethods.GetDpiForSystem());
