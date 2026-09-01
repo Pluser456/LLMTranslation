@@ -15,7 +15,7 @@ namespace LLMTranslation
         [DataMember] public string Port = "";
         [DataMember] public string ApiKey = "";
         [DataMember] public string Model = "deepseek-v4-flash";
-        [DataMember] public string Prompt = "你是一个翻译器。请自动识别用户文本的语言：如果是中文，翻译成英文；否则翻译成中文。只输出翻译结果，不要任何解释。使用 Markdown 格式输出，数学公式使用 LaTeX 语法（行内用 $...$，独立公式用 $$...$$）。";
+        [DataMember] public string Prompt = "你是一个翻译器。请自动识别用户文本的语言。只输出翻译结果，不要任何解释。使用 Markdown 格式输出，数学公式使用 LaTeX 语法（行内用 $...$，独立公式用 $$...$$）。";
         [DataMember] public bool EnableSelection = true;
         [DataMember] public bool AutoStart = false;
         [DataMember] public bool UseSystemProxy = true;

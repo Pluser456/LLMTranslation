@@ -445,7 +445,7 @@ namespace LLMTranslation
                         case "ready": AppContext.Log("web ready dpr=" + (m.dpr > 0 ? m.dpr.ToString("0.##") : "?") + " win=" + Size); PushInit(); PushOrig(); PushNow(); break;   // JS 以 JSON 发送
                         case "pause": if (_cts != null) { _cts.Cancel(); _cts = null; PushState(false); } break;
                         case "orig": if (_cfg != null) { _cfg.ShowOriginal = !_cfg.ShowOriginal; _cfg.Save(); PushOrig(); } break;
-                        case "lang": if (_cfg != null) { _cfg.TargetLang = m.tgt ?? "auto"; _cfg.Save(); PushInit(); Retranslate(); } break;
+                        case "lang": if (_cfg != null) { string nt = m.tgt ?? "auto"; if (nt != _cfg.TargetLang) { _cfg.TargetLang = nt; _cfg.Save(); PushInit(); Retranslate(); } } break;   // 变更才保存+重译; 与当前相同则忽略
                         case "setconfig": ApplyConfig(m.cfg); break;
                     }
                 }

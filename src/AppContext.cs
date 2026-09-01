@@ -134,7 +134,7 @@ namespace LLMTranslation
             }
         }
 
-        private const string BuildTag = "v13wht1";    // v12dpi + 翻译窗真最小化到任务栏 (exe 内嵌图标 + WM_SETICON 双保险)
+        private const string BuildTag = "v13prompt1";    // 目标语言选择器修复 + 默认提示词去方向规则
         private static readonly bool DebugLog = Environment.GetEnvironmentVariable("LLMTRANSLATION_DEBUG") == "1";
         // 调试日志开关: 环境变量 LLMTRANSLATION_DEBUG=1, 或数据目录存在 debug.txt 文件 (删掉文件即关闭)
         private static readonly string DebugFlagFile = Path.Combine(
@@ -167,7 +167,7 @@ namespace LLMTranslation
         }
 
         private const string RunDepsVersion = "1";   // 内嵌 WebView2 依赖包版本 (变更时 +1 触发重新解包)
-        private const string WebAssetsVersion = "8"; // 内嵌 web 资源版本 (变更时 +1 触发重新解包)
+        private const string WebAssetsVersion = "9"; // 内嵌 web 资源版本 (变更时 +1 触发重新解包)
 
         private static bool ExtractZipIfChanged(string resName, string targetDir, string version)
         {
