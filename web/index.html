@@ -251,7 +251,13 @@ $('tgtPill').onclick = function (e) {
   m.style.left = r.left + 'px'; m.style.top = (r.bottom + 4) + 'px'; m.style.display = 'block';
   e.stopPropagation();
 };
-document.addEventListener('mousedown', function () { $('langMenu').style.display = 'none'; });
+document.addEventListener('mousedown', function (e) {
+  // 只有点到菜单外部才关闭; 若点菜单项自身, 交给 item 的 click 处理
+  // (旧版无条件在 mousedown 隐藏菜单 → 元素消失 → click 不再触发 → 选项点了没反应)
+  var m = $('langMenu');
+  if (m.contains(e.target)) return;
+  m.style.display = 'none';
+});
 
 /* 设置弹窗 */
 function openSettings() {

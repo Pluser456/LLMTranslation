@@ -100,7 +100,7 @@ namespace LLMTranslation
                 if (!string.IsNullOrEmpty(cfg.SourceLang) && cfg.SourceLang != "auto")
                     sys += "\n源语言为：" + TranslateForm.LangName(cfg.SourceLang) + "。";
                 if (!string.IsNullOrEmpty(cfg.TargetLang) && cfg.TargetLang != "auto")
-                    sys += "\n请将结果翻译为：" + TranslateForm.LangName(cfg.TargetLang) + "。";
+                    sys += "\n目标语言：" + TranslateForm.LangName(cfg.TargetLang) + "。";
                 string body = "{\"model\":\"" + JsonEscape(cfg.Model) + "\",\"stream\":true,\"messages\":[{" +
                     "\"role\":\"system\",\"content\":\"" + JsonEscape(sys) + "\"},{" +
                     "\"role\":\"user\",\"content\":\"" + JsonEscape(text) + "\"}]";
