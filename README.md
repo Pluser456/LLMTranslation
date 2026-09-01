@@ -37,10 +37,9 @@ build.bat          编译脚本（用系统自带 csc，无需安装任何 SDK�
 src\Program.cs     全部源码（单文件）
 src\app.manifest   DPI 感知清单
 src\TestTarget.cs  自动化测试用的目标窗口
-libs\              WebView2 互操作 DLL（编译引用 + 随 dist 分发）
-dist\LLMTranslation.exe  成品
-dist\web\          渲染页：index.html + marked.min.js + tex-svg.js(MathJax SVG, 无需字体)
-dist\*.dll         WebView2 运行时互操作（~750KB）
+libs\              WebView2 互操作 DLL（编译引用 + 内嵌 rundeps.zip 随单文件分发）
+web\               前端渲染页：index.html（翻译窗）+ settings.html + marked.min.js + KaTeX
+dist\LLMTranslation.exe  成品（单文件）
 dist\TestTarget.exe      仅测试用
 test-e2e.ps1       端到端测试：拖选/双击 → 浮动按钮 → 翻译窗
 test-api.ps1       端到端测试：本地 mock OpenAI SSE 服务验证流式翻译 + 公式渲染

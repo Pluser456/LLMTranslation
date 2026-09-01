@@ -7,7 +7,7 @@ if not exist "dist" mkdir "dist"
 if not exist "dist\build" mkdir "dist\build"
 
 rem ---- 打包内嵌资源: web 前端 + WebView2 依赖 (单文件 exe 启动时解包到 %LOCALAPPDATA% ) ----
-powershell -NoProfile -Command "Compress-Archive -Force -Path 'dist\web\*' -DestinationPath 'dist\build\webassets.zip'"
+powershell -NoProfile -Command "Compress-Archive -Force -Path 'web\*' -DestinationPath 'dist\build\webassets.zip'"
 powershell -NoProfile -Command "Compress-Archive -Force -Path 'libs\Microsoft.Web.WebView2.Core.dll','libs\Microsoft.Web.WebView2.WinForms.dll','libs\WebView2Loader.dll' -DestinationPath 'dist\build\rundeps.zip'"
 if not exist "dist\build\webassets.zip" ( echo PACK WEB FAILED & exit /b 1 )
 if not exist "dist\build\rundeps.zip" ( echo PACK DEPS FAILED & exit /b 1 )
