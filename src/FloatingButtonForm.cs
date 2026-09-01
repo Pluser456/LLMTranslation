@@ -20,8 +20,9 @@ namespace LLMTranslation
             // 字体同样钉死固定像素字号(见 OnPaint) → 任何缩放屏幕上观感完全一致。
             Size = new Size(98, 40);
             DoubleBuffered = true;
-            BackColor = Color.Magenta;
-            TransparencyKey = Color.Magenta;   // 关键色透明, 跨设备稳定(不依赖分层窗口)
+            BackColor = Color.White;
+            // 圆角靠窗口 Region 裁剪 (原生 GDI, 无关键色/无分层窗口 → 无品红晕边);
+            // 描边为灰色 2px 线 (见 OnPaint)。
             Text = "LLMT_FLOAT";   // 稳定标题, 供自动化测试定位
         }
 
@@ -68,20 +69,20 @@ namespace LLMTranslation
             if (Visible) Hide();
         }
 
+        // 字体钉死为固定物理像素: 17.5/14.17/18.33px = 旧版(建分支前)在本机的观感
+        // (旧版不感知进程的窗口 DC 报真实 120dpi, 10.5/8.5/11pt 按 120 换算而来)。
+        // GraphicsUnit.Pixel 为字面设备像素, 不受进程 DPI 影响 → 任何缩放屏幕观感一致。
         protected override void OnPaint(PaintEventArgs e)
         {
             var g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
-            g.Clear(TransparencyKey);   // 关键色透明
-            // 字体钉死为固定物理像素: 17.5/14.17/18.33px = 旧版(建分支前)在本机的观感
-            // (旧版不感知进程的窗口 DC 报真实 120dpi, 10.5/8.5/11pt 按 120 换算而来)。
-            // GraphicsUnit.Pixel 为字面设备像素, 不受进程 DPI 影响 → 任何缩放屏幕观感一致。
-            Rectangle r = new Rectangle(0, 0, 97, 39);
-            using (GraphicsPath path = RoundRect(r, 9))
+            g.Clear(Color.White);
+            // 圆角由窗口 Region 裁剪; 描边内缩 1px 避开裁剪边缘, 灰色 2px 线
+            Rectangle r = new Rectangle(1, 1, 95, 37);
+            using (GraphicsPath path = RoundRect(r, 8))
             {
-                using (SolidBrush brush = new SolidBrush(Color.White)) g.FillPath(brush, path);
-                using (Pen pen = new Pen(Color.FromArgb(210, 210, 210))) g.DrawPath(pen, path);
+                using (Pen pen = new Pen(Color.FromArgb(150, 150, 150), 2f)) g.DrawPath(pen, path);
             }
             using (Font f1 = new Font("Microsoft YaHei UI", 17.5f, FontStyle.Bold, GraphicsUnit.Pixel))
             using (Font f2 = new Font("Microsoft YaHei UI", 14.17f, FontStyle.Bold, GraphicsUnit.Pixel))
@@ -93,6 +94,16 @@ namespace LLMTranslation
                 g.DrawString("翻译", f3, fg, 42, 9);
             }
             base.OnPaint(e);
+        }
+
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            // Region 裁剪成圆角 (与旧版 97×39 形状一致, 右侧/下侧各留 1px)
+            using (GraphicsPath path = RoundRect(new Rectangle(0, 0, 97, 39), 9))
+            {
+                Region = new Region(path);
+            }
         }
 
         internal static GraphicsPath RoundRect(Rectangle r, int radius)
