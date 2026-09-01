@@ -290,6 +290,9 @@ static class AutoTest
             Console.WriteLine("hotkey-direct => " + (ok ? "PASS" : "FAIL") + " | hotkey=" + hot + " sent=" + sent + " translateVis=" + (trNew != IntPtr.Zero && IsWindowVisible(trNew)) + " capsuleVis=" + capVis);
         }
 
+        // 收尾: 关闭 TestTarget 测试窗 (残留进程会锁住 dist\TestTarget.exe, 导致下次 build.bat 失败)
+        try { foreach (Process p in Process.GetProcessesByName("TestTarget")) { try { p.Kill(); } catch { } } } catch { }
+
         return 0;
     }
 }
