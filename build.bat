@@ -39,6 +39,9 @@ if %errorlevel% neq 0 (
   exit /b 1
 )
 
+rem 中间 zip 已嵌入 exe, 清理临时目录
+rmdir /s /q "dist\build" 2>nul
+
 "%FW%\csc.exe" /nologo /optimize /target:winexe /out:dist\TestTarget.exe ^
   /reference:System.dll ^
   /reference:System.Drawing.dll ^
@@ -46,11 +49,8 @@ if %errorlevel% neq 0 (
   src\TestTarget.cs
 
 if %errorlevel% equ 0 (
-  copy /y libs\Microsoft.Web.WebView2.Core.dll dist\ >nul
-  copy /y libs\Microsoft.Web.WebView2.WinForms.dll dist\ >nul
-  copy /y libs\WebView2Loader.dll dist\ >nul
   echo.
-  echo BUILD OK -^> dist\LLMTranslation.exe single-file ~1.2MB, dist\TestTarget.exe
+  echo BUILD OK -^> dist\LLMTranslation.exe single-file ~740KB, dist\TestTarget.exe
 ) else (
   echo.
   echo BUILD FAILED
