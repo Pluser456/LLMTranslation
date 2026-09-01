@@ -62,6 +62,9 @@ namespace LLMTranslation
 
         private void StartWeb()
         {
+            // 竞态修复 (同 TranslateForm.StartWeb): WebView2 "热"时 env 续体可能早于
+            // 句柄创建返回, 续体投递失败被丢 → 二次打开白屏。先强制同步创建句柄。
+            var h = Handle;
             try
             {
                 AppContext.Log("web(settings) env start shellDpi=" + NativeMethods.GetDpiForSystem());
@@ -99,21 +102,10 @@ namespace LLMTranslation
 
         private void PostUI(Action a)
         {
-            try
-            {
-                if (IsDisposed) return;
-                if (IsHandleCreated) { BeginInvoke(a); return; }
-                // 句柄尚未创建 (构造与 Show 之间的微小窗口): 短暂重试
-                var tm = new System.Windows.Forms.Timer { Interval = 25 };
-                tm.Tick += delegate
-                {
-                    tm.Stop();
-                    if (IsDisposed) return;
-                    if (IsHandleCreated) BeginInvoke(a);
-                    else PostUI(a);
-                };
-                tm.Start();
-            }
+            // 句柄已在 StartWeb 开头强制创建, 这里必走 BeginInvoke 直投。
+            // (旧版在此用线程池 Timer 兜底重试, 但线程池无消息泵 Tick 永不触发,
+            //  是白屏 bug 的直接机制, 已删)
+            try { if (IsHandleCreated && !IsDisposed) BeginInvoke(a); }
             catch { }
         }
 
