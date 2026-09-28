@@ -194,6 +194,7 @@ namespace LLMTranslation
 
         private void ApplyRoundRegion()
         {
+            if (_edgeResizing) return;   // 拖动中保持直角 (BeginEdgeResize 已解除 Region), 松手后恢复
             using (GraphicsPath path = FloatingButtonForm.RoundRect(new Rectangle(0, 0, Width, Height), 12))
             {
                 this.Region = new Region(path);
@@ -281,6 +282,9 @@ namespace LLMTranslation
             _edgeResizing = true;
             _startRect = this.Bounds;
             _dragStart = Cursor.Position;
+            // 圆角 Region 是"窗口先变大、SetWindowRgn 后到": 每步新暴露的边带短暂落在旧 Region 外,
+            // 透出桌面形成闪烁带。拖动期间解除 Region 保持直角, EndDrag 恢复圆角。
+            this.Region = null;
             NativeMethods.SetCapture(this.Handle);   // 捕获鼠标, 移动/抬起在 WndProc 处理, 不受子窗口影响
         }
 
@@ -304,6 +308,7 @@ namespace LLMTranslation
         public void EndDrag()
         {
             _edgeResizing = false;
+            ApplyRoundRegion();   // 松手恢复圆角裁剪
             NativeMethods.ReleaseCapture();
         }
 
