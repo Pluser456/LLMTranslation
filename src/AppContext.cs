@@ -337,7 +337,7 @@ namespace LLMTranslation
                 }
                 else if (msg == NativeMethods.WM_LBUTTONDOWN)
                 {
-                    if (_translate != null && _translate.Visible)
+                    if (_translate != null && _translate.Visible && !(_dialog != null && _dialog.Bounds.Contains(pt)))
                     {
                         int em = _translate.EdgeMaskAt(pt);
                         if (em != 0) _translate.BeginEdgeResize(em);
