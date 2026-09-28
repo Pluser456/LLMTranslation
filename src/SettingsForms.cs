@@ -109,9 +109,12 @@ namespace LLMTranslation
             crnTR.Bounds = new Rectangle(W - 10, 0, 10, 10);
             crnBL.Bounds = new Rectangle(0, H - 10, 10, 10);
             crnBR.Bounds = new Rectangle(W - 10, H - 10, 10, 10);
-            using (GraphicsPath path = FloatingButtonForm.RoundRect(new Rectangle(0, 0, Width, Height), 12))
+            if (!_edgeResizing)
             {
-                this.Region = new Region(path);   // 圆角随尺寸重建
+                using (GraphicsPath path = FloatingButtonForm.RoundRect(new Rectangle(0, 0, Width, Height), 12))
+                {
+                    this.Region = new Region(path);   // 圆角随尺寸重建 (拖动中保持直角, 松手后恢复)
+                }
             }
         }
 
@@ -129,6 +132,8 @@ namespace LLMTranslation
             _edgeResizing = true;
             _startRect = this.Bounds;
             _dragStart = Cursor.Position;
+            // 同 TranslateForm: 拖动期间解除圆角 Region, 避免"窗口先变大、Region 后到"的透明闪烁带
+            this.Region = null;
             NativeMethods.SetCapture(this.Handle);
         }
 
@@ -149,6 +154,7 @@ namespace LLMTranslation
         private void EndDrag()
         {
             _edgeResizing = false;
+            LayoutEdges();   // 松手恢复圆角裁剪
             NativeMethods.ReleaseCapture();
         }
 
