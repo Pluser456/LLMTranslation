@@ -1,6 +1,7 @@
 // 自动拆分自 Program.cs - 模块: SettingsForms
 using System;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
@@ -13,6 +14,19 @@ namespace LLMTranslation
     public class WebDialogForm : Form
     {
         private Microsoft.Web.WebView2.WinForms.WebView2 _web;
+        private Panel body;
+        private Panel edgeL;
+        private Panel edgeR;
+        private Panel edgeT;
+        private Panel edgeB;
+        private Panel crnTL;
+        private Panel crnTR;
+        private Panel crnBL;
+        private Panel crnBR;
+        private bool _edgeResizing;
+        private int _edgeMask;
+        private Rectangle _startRect;
+        private Point _dragStart;
         private Config _cfg;
         private string _tab;
         public Action ConfigChanged;
@@ -27,12 +41,115 @@ namespace LLMTranslation
             DoubleBuffered = true;
             float s = Dpi.Scale;
             Size = new Size((int)(520 * s), (int)(620 * s));
-            using (var rp = FloatingButtonForm.RoundRect(new Rectangle(0, 0, Width, Height), 12)) Region = new Region(rp);  // 圆角窗口
+            MinimumSize = new Size((int)(400 * s), (int)(460 * s));
             _web = new Microsoft.Web.WebView2.WinForms.WebView2();
             _web.Dock = DockStyle.Fill;
-            Controls.Add(_web);
+
+            // 边缘/角落透明覆盖层: 提供缩放光标 + 按下开始缩放 (同 TranslateForm;
+            // 本窗不在鼠标钩子的 _translate 通道内, 面板 MouseDown 可直接触发)
+            edgeL = MkEdge(Cursors.SizeWE, 1);
+            edgeR = MkEdge(Cursors.SizeWE, 2);
+            edgeT = MkEdge(Cursors.SizeNS, 4);
+            edgeB = MkEdge(Cursors.SizeNS, 8);
+            crnTL = MkEdge(Cursors.SizeNWSE, 5);
+            crnBR = MkEdge(Cursors.SizeNWSE, 10);
+            crnTR = MkEdge(Cursors.SizeNESW, 6);
+            crnBL = MkEdge(Cursors.SizeNESW, 9);
+
+            // 内衬容器: 四周留 6px 环带, 边缘覆盖层不与 WebView 抢鼠标
+            body = new Panel();
+            body.Dock = DockStyle.Fill;
+            body.Padding = new Padding(6);
+            body.BackColor = Color.White;
+            body.Controls.Add(_web);
+            Controls.Add(body);
+            Controls.Add(edgeL);
+            Controls.Add(edgeR);
+            Controls.Add(edgeT);
+            Controls.Add(edgeB);
+            Controls.Add(crnTL);
+            Controls.Add(crnTR);
+            Controls.Add(crnBL);
+            Controls.Add(crnBR);
+            edgeL.BringToFront();
+            edgeR.BringToFront();
+            edgeT.BringToFront();
+            edgeB.BringToFront();
+            crnTL.BringToFront();
+            crnTR.BringToFront();
+            crnBL.BringToFront();
+            crnBR.BringToFront();
+            SizeChanged += delegate { LayoutEdges(); };
+            LayoutEdges();
             Icon = AppContext.GetSharedIcon();   // 任务栏图标 = 托盘同款蓝底"译"
             StartWeb();
+        }
+
+        private Panel MkEdge(Cursor cur, int mask)
+        {
+            Panel p = new Panel();
+            p.BackColor = Color.Transparent;
+            p.Cursor = cur;
+            p.MouseDown += delegate(object s, MouseEventArgs e)
+            {
+                if (e.Button == MouseButtons.Left) BeginEdgeResize(mask);
+            };
+            return p;
+        }
+
+        private void LayoutEdges()
+        {
+            int W = ClientSize.Width;
+            int H = ClientSize.Height;
+            edgeL.Bounds = new Rectangle(0, 0, 6, H);
+            edgeR.Bounds = new Rectangle(W - 6, 0, 6, H);
+            edgeT.Bounds = new Rectangle(0, 0, W, 6);
+            edgeB.Bounds = new Rectangle(0, H - 6, W, 6);
+            crnTL.Bounds = new Rectangle(0, 0, 10, 10);
+            crnTR.Bounds = new Rectangle(W - 10, 0, 10, 10);
+            crnBL.Bounds = new Rectangle(0, H - 10, 10, 10);
+            crnBR.Bounds = new Rectangle(W - 10, H - 10, 10, 10);
+            using (GraphicsPath path = FloatingButtonForm.RoundRect(new Rectangle(0, 0, Width, Height), 12))
+            {
+                this.Region = new Region(path);   // 圆角随尺寸重建
+            }
+        }
+
+        protected override void WndProc(ref Message m)
+        {
+            // SetCapture 后, 移动/抬起消息路由到本窗体, 驱动边缘缩放
+            if (m.Msg == 0x0200 && _edgeResizing) UpdateDrag(Cursor.Position);   // WM_MOUSEMOVE
+            else if (m.Msg == 0x0202 && _edgeResizing) EndDrag();                 // WM_LBUTTONUP
+            base.WndProc(ref m);
+        }
+
+        private void BeginEdgeResize(int mask)
+        {
+            _edgeMask = mask;
+            _edgeResizing = true;
+            _startRect = this.Bounds;
+            _dragStart = Cursor.Position;
+            NativeMethods.SetCapture(this.Handle);
+        }
+
+        private void UpdateDrag(Point p)
+        {
+            Rectangle r = _startRect;
+            int dx = p.X - _dragStart.X;
+            int dy = p.Y - _dragStart.Y;
+            if ((_edgeMask & 1) != 0) { r.X = _startRect.X + dx; r.Width = _startRect.Width - dx; }
+            if ((_edgeMask & 2) != 0) { r.Width = _startRect.Width + dx; }
+            if ((_edgeMask & 4) != 0) { r.Y = _startRect.Y + dy; r.Height = _startRect.Height - dy; }
+            if ((_edgeMask & 8) != 0) { r.Height = _startRect.Height + dy; }
+            if (r.Width < MinimumSize.Width) { if ((_edgeMask & 1) != 0) r.X = r.Right - MinimumSize.Width; r.Width = MinimumSize.Width; }
+            if (r.Height < MinimumSize.Height) { if ((_edgeMask & 4) != 0) r.Y = r.Bottom - MinimumSize.Height; r.Height = MinimumSize.Height; }
+            this.Bounds = r;
+        }
+
+        private void EndDrag()
+        {
+            _edgeResizing = false;
+            NativeMethods.ReleaseCapture();
         }
 
         // FormBorderStyle=None 时 WinForms 不发 WM_SETICON (同 TranslateForm), 手动补三种槽位;

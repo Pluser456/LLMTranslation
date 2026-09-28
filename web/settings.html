@@ -14,7 +14,7 @@
   .tab.on{ background:var(--muted); color:var(--fg); font-weight:600; }
   #close{ margin-left:auto; z-index:1; width:30px; height:28px; border:none; background:transparent; border-radius:6px; color:var(--muted-fg); cursor:pointer; }
   #close:hover{ background:var(--muted); }
-  #body{ flex:1; overflow:auto; padding:6px 18px 16px; }
+  #body{ flex:1; overflow:auto; padding:6px 18px 10px; }
   label{ display:block; font-size:12px; color:var(--muted-fg); margin:10px 0 4px; }
   input,textarea{ width:100%; border:1px solid var(--border); border-radius:6px; padding:7px 9px; font-size:13px; font-family:inherit; color:var(--fg); outline:none; }
   input:focus,textarea:focus{ border-color:var(--accent); }
@@ -22,7 +22,7 @@
   .row{ display:flex; gap:10px; } .row>div{ flex:1; }
   .chk{ display:flex; align-items:center; gap:7px; font-size:13px; margin:10px 0; }
   .chk input{ width:auto; }
-  .foot{ display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
+  #foot{ flex:0 0 auto; display:flex; justify-content:flex-end; gap:8px; padding:8px 18px 14px; background:var(--bg); }
   .btn{ border:none; border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer; }
   .btn.pri{ background:var(--accent); color:#fff; } .btn.plain{ background:var(--muted); color:var(--fg); }
   .help{ font-size:13px; line-height:1.9; color:var(--fg); }
@@ -57,10 +57,6 @@
       <label class="chk"><input type="checkbox" id="sThink"> 允许模型思考 (翻译建议关闭)</label>
       <label class="chk"><input type="checkbox" id="sSel"> 启用划词翻译</label>
       <label class="chk"><input type="checkbox" id="sAuto"> 开机自动启动</label>
-      <div class="foot">
-        <button class="btn plain" id="cancel">取消</button>
-        <button class="btn pri" id="save">保存</button>
-      </div>
     </div>
     <div id="paneHelp" class="help" style="display:none">
       <h3>用法</h3>
@@ -73,6 +69,10 @@
         <li>点击或右键托盘图标弹出菜单(划词开关 / 设置 / 退出), 双击托盘图标直接打开本设置。</li>
       </ul>
     </div>
+  </div>
+  <div id="foot">
+    <button class="btn plain" id="cancel">取消</button>
+    <button class="btn pri" id="save">保存</button>
   </div>
 <script>
 var $ = function (id) { return document.getElementById(id); };
@@ -91,6 +91,7 @@ function showTab(t) {
   $('tabSet').classList.toggle('on', t === 'set'); $('tabHelp').classList.toggle('on', t === 'help');
   $('paneSet').style.display = t === 'set' ? 'block' : 'none';
   $('paneHelp').style.display = t === 'help' ? 'block' : 'none';
+  $('foot').style.display = t === 'set' ? 'flex' : 'none';   // 取消/保存为固定底栏, 仅设置页显示
 }
 $('tabSet').onclick = function () { showTab('set'); };
 $('tabHelp').onclick = function () { showTab('help'); };

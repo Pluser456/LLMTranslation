@@ -167,7 +167,7 @@ namespace LLMTranslation
         }
 
         private const string RunDepsVersion = "1";   // 内嵌 WebView2 依赖包版本 (变更时 +1 触发重新解包)
-        private const string WebAssetsVersion = "9"; // 内嵌 web 资源版本 (变更时 +1 触发重新解包)
+        private const string WebAssetsVersion = "10"; // 内嵌 web 资源版本 (变更时 +1 触发重新解包)
 
         private static bool ExtractZipIfChanged(string resName, string targetDir, string version)
         {
@@ -337,7 +337,7 @@ namespace LLMTranslation
                 }
                 else if (msg == NativeMethods.WM_LBUTTONDOWN)
                 {
-                    if (_translate != null && _translate.Visible)
+                    if (_translate != null && _translate.Visible && !(_dialog != null && _dialog.Bounds.Contains(pt)))
                     {
                         int em = _translate.EdgeMaskAt(pt);
                         if (em != 0) _translate.BeginEdgeResize(em);
