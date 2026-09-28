@@ -31,19 +31,36 @@ namespace LLMTranslation
             _web = new Microsoft.Web.WebView2.WinForms.WebView2();
             _web.Dock = DockStyle.Fill;
             Controls.Add(_web);
+            Icon = AppContext.GetSharedIcon();   // 任务栏图标 = 托盘同款蓝底"译"
             StartWeb();
+        }
+
+        // FormBorderStyle=None 时 WinForms 不发 WM_SETICON (同 TranslateForm), 手动补三种槽位;
+        // 槽位 0 空时资源管理器会回退到 exe 的默认 CS 窗口图标, 故必须显式设置
+        private void ApplyWindowIcon()
+        {
+            try
+            {
+                IntPtr hicon = AppContext.GetSharedIcon().Handle;
+                NativeMethods.SendMessage(this.Handle, 0x0080 /*WM_SETICON*/, new IntPtr(0 /*ICON_SMALL2*/), hicon);
+                NativeMethods.SendMessage(this.Handle, 0x0080, new IntPtr(1 /*ICON_SMALL*/), hicon);
+                NativeMethods.SendMessage(this.Handle, 0x0080, new IntPtr(2 /*ICON_BIG*/), hicon);
+            }
+            catch { }
         }
 
         // ---- 纯日志: 窗口状态诊断 (不改变任何行为) ----
         protected override void OnHandleCreated(EventArgs e)
         {
             base.OnHandleCreated(e);
+            ApplyWindowIcon();
             WinLog.Window("settings-handle", this);
         }
 
         protected override void OnShown(EventArgs e)
         {
             base.OnShown(e);
+            ApplyWindowIcon();   // WinForms UpdateIcon 可能在显示时清空无边框窗图标, 再补一次
             WinLog.Window("settings-shown", this);
         }
 
