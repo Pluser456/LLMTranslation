@@ -257,9 +257,16 @@ namespace LLMTranslation
         public int EdgeMaskAt(Point p)
         {
             Rectangle r = this.Bounds;
-            const int b = 6;
+            const int b = 6, k = 10;   // k = 角落覆盖层边长, 与 LayoutCustom 的 10×10 保持一致
             bool near = p.X >= r.X - 2 && p.X <= r.Right + 1 && p.Y >= r.Y - 2 && p.Y <= r.Bottom + 1;
             if (!near) return 0;
+            // 角落 10×10 内一律双向 mask: 钩子先于面板 MouseDown 生效并 SetCapture,
+            // 若沿用 6px 带判定, 角区超出 6px 的部分会只显示斜向光标却单向缩放
+            bool l = p.X <= r.X + k, rt = p.X >= r.Right - k, t = p.Y <= r.Y + k, bt = p.Y >= r.Bottom - k;
+            if (l && t) return 5;    // TL = 左|上
+            if (rt && t) return 6;   // TR = 右|上
+            if (l && bt) return 9;   // BL = 左|下
+            if (rt && bt) return 10; // BR = 右|下
             int mask = 0;
             if (p.X <= r.X + b) mask |= 1;
             if (p.X >= r.Right - b) mask |= 2;
