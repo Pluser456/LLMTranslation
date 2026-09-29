@@ -1,15 +1,19 @@
 # LLMTranslation — 轻量级 AI 划词翻译小工具
 
-参考 Cherry Studio 的划词翻译流程，但只保留这一个功能，做到极致轻量：
+本仓库完全使用 AI 工具 vibe coding 生成（不包括本文档，本文档在 AI 编写大部分后，人工进行了审查）。
 
-- **整个 dist 目录仅 ~2.8 MB**（要求 ≤15MB）
+Models: Qwen 3.8 flash + Qwen 3.8 27B
+Agents: Pi + QoderCLI
+
+参考 Cherry Studio 的划词翻译流程，但只保留这一个功能，做到极致轻量（小于15 MB）：
+
+- **可执行文件仅 ~750KB**
 - 不捆绑任何运行时：基于 Windows 自带的 .NET Framework 4.8（Win10/11 均已内置）
 - 可配置任意 **OpenAI 兼容 API**（地址 / 端口 / Key / 模型 / 提示词）
-- **公式渲染**：翻译结果用 WebView2 + marked + MathJax(full 全宏包, 含 \boldsymbol 等) 渲染 Markdown 与 LaTeX 公式
-  （$...$ 行内、$$...$$ 独立公式；离线本地 JS，不联网；WebView2 不可用时自动回退纯文本）
+- 公式渲染：翻译结果在 WebView2 中用 marked + KaTeX 渲染 Markdown 与 LaTeX 公式（$…$ 行内、$$…$$ 独立公式，支持 \boldsymbol 等常用符号）；脚本与字体全部本地打包、离线可用不联网；WebView2 不可用时自动回退为纯文本显示
 - **Cherry Studio 风格翻译窗**：圆角窗口；标题栏(置顶/最小化/关闭)可拖动；
-  工具栏：源语言→目标语言选择(自动/简体中文/English)、⇄ 交换、显示/隐藏原文、复制(带“复制成功”toast)
-- 窗口交互：**四条边/四角透明热区按住缩放**，悬停时显示对应双向箭头光标（最小 320×240）；**原文/译文间灰色分隔条上下拖动**
+  工具栏：源语言→目标语言选择(自动/简体中文/English)、显示/隐藏原文、复制(带“复制成功”提示)
+- 窗口交互：**四条边/四角透明热区按住缩放**，悬停时显示对应双向箭头光标（最小 320×240）
 - **流式实时渲染**：SSE 逐块推送，文本即时增量显示；MathJax 公式 400ms 防抖后排版，避免阻塞流式观感
 - 翻译窗快捷键：**C 复制 / R 重译 / Esc 关闭**
 - 默认携带 `"thinking":{"type":"disabled"}` 禁用 DeepSeek 思考（更快更省），设置里可重新开启
@@ -22,29 +26,47 @@
    - **API 地址**：默认 `https://api.deepseek.com/v1`（模型 `deepseek-v4-flash`），任何 OpenAI 兼容接口均可，如本地代理 `http://127.0.0.1:7890/v1`
    - **端口（可选）**：单独覆盖地址中的端口（如一本地转发端口）
    - **API Key / 模型 / 系统提示词**
-   - 开机自启（写入 HKCU Run 注册表）
 3. 在任意软件中**拖选**或**双击**文字 → 光标旁弹出 `文A 翻译` 浮动按钮（鼠标移开约 1 秒后自动消失）。
 4. 点击按钮 → 弹出翻译小窗，流式（SSE）实时显示译文；支持 置顶 / 复制 / 拖边缩放 / 最小化到任务栏 / `Esc 关闭`。
 5. 全局快捷键（默认 **Alt+Q**，设置里点击输入框按组合键即可改）：不弹浮动按钮，直接打开翻译窗翻译当前选中的文字。
 6. 点击或右键托盘：开关划词、设置 / 使用说明、退出；双击托盘直接打开设置。
 
-配置保存在 exe 同目录 `config.json`（纯文本 JSON，可手改）。
+配置保存在 `%LOCALAPPDATA%\LLMTranslation\config.json`（纯文本 JSON，可手改）。
 
 ## 目录结构
 
 ```
-build.bat          编译脚本（用系统自带 csc，无需安装任何 SDK）
-src\Program.cs     全部源码（单文件）
-src\app.manifest   DPI 感知清单
-src\TestTarget.cs  自动化测试用的目标窗口
-libs\              WebView2 互操作 DLL（编译引用 + 内嵌 rundeps.zip 随单文件分发）
-web\               前端渲染页：index.html（翻译窗）+ settings.html + marked.min.js + KaTeX
-dist\LLMTranslation.exe  成品（单文件）
-dist\TestTarget.exe      仅测试用
-test-e2e.ps1       端到端测试：拖选/双击 → 浮动按钮 → 翻译窗
-test-api.ps1       端到端测试：本地 mock OpenAI SSE 服务验证流式翻译 + 公式渲染
-mock-server.ps1    测试用 mock 服务
-test-ui.ps1        端到端测试：翻译窗拖动 + 缩放
+build.bat            编译脚本 (系统自带 csc, 零依赖; 打包 web/ 与 libs/ 为内嵌资源)
+src\                 全部源码 (由单文件 Program.cs 按模块自动拆分, 编译时一起喂给 csc)
+  Program.cs         入口: 单实例 Mutex + 启动 AppContext
+  AppContext.cs      主控: 托盘/热键装配、全局鼠标钩子、取词调度、资源解包、日志开关
+  TrayHotkey.cs      托盘图标 + 全局热键 (隐藏消息窗)
+  TranslateForm.cs   翻译窗: WebView2 渲染、流式增量、边缘/角落缩放、DWM 圆角
+  SettingsForms.cs   完整设置 / 使用说明窗 (WebDialogForm, WebView2)
+  FloatingButtonForm.cs  划词胶囊浮动按钮 (自绘; 含 RoundRect 圆角工具)
+  Translator.cs      OpenAI 兼容 API 调用 + SSE 流式解析
+  Config.cs          配置读写 (%LOCALAPPDATA%\LLMTranslation\config.json)
+  Models.cs          数据模型 (WebMsg / CfgDto 等前后端消息)
+  Dpi.cs             DPI 感知与缩放系数 (Dpi.Scale)
+  NativeMethods.cs   Win32 P/Invoke + EdgePanel/EdgeBodyPanel/DWM 圆角等辅助
+  WinLog.cs          诊断日志 (log.txt, 仅调试模式写)
+  TestTarget.cs      自动化测试用目标窗口 (提供可选中文本)
+  app.manifest       DPI 感知清单    app.ico  应用/任务栏图标
+web\                 前端渲染页 (编译时打包为内嵌 webassets, 首启解包到 %LOCALAPPDATA%)
+  index.html         翻译窗页面: 译文 Markdown/公式渲染 + 工具栏 + "快捷设置"弹窗
+  settings.html      完整设置 / 使用说明页面
+  marked.min.js      Markdown 解析 (离线)
+  katex.min.js/css   KaTeX 公式渲染 (离线, 行内 $...$ / 独立 $$...$$)
+  fonts\             KaTeX 字体 (woff2)
+libs\                WebView2 互操作 DLL (编译引用 + 内嵌 rundeps.zip 随单文件分发)
+dist\                成品: LLMTranslation.exe (单文件) + TestTarget.exe (仅测试)
+tools\makeicon.*     生成 app.ico 的小工具
+test-e2e.ps1         端到端测试: 拖选/双击 → 胶囊 → 翻译窗
+test-api.ps1         端到端测试: 本地 mock SSE 服务验证流式翻译 + 公式渲染
+test-ui.ps1          端到端测试: 翻译窗拖动 + 边缘/角落缩放 (读取配置里的热键)
+mock-server.ps1      测试用 mock OpenAI SSE 服务
+AutoTest.cs/.exe     真实鼠标划词自动化校验 (配合 autotest.manifest)
+tmpcheck\            开发期临时验证脚本 (未纳入版本库)
 ```
 
 ## 重新编译
@@ -78,10 +100,10 @@ build.bat
 
 | 软件 | 体积 | 状况 |
 |---|---|---|
-| Cherry Studio | ~100MB+ | 功能全但臃肿（你想避免的） |
+| Cherry Studio | ~100MB+ | 功能全但臃肿 |
 | pot-desktop | 安装包 31.6MB | 超过 15MB 限制，且已停止维护 |
 | STranslate | ~100MB | 超过限制 |
-| **本工具** | **0.035MB** | 只做划词翻译这一件事 |
+| **本工具** | **0.75MB** | 只做划词翻译这一件事 |
 
 ## 打包与部署（单文件）
 
@@ -89,15 +111,8 @@ build.bat
 
 | 产物 | 大小 | 说明 |
 |---|---|---|
-| `dist\LLMTranslation.exe` | ~659 KB | **单文件版**：复制到任意位置即可运行（桌面/优盘均可）。首次启动自动把内嵌的 web 前端与 WebView2 依赖解包到 `%LOCALAPPDATA%\LLMTranslation\` |
+| `dist\LLMTranslation.exe` | ~741 KB | **单文件版**：复制到任意位置即可运行（桌面/优盘均可）。首次启动自动把内嵌的 web 前端与 WebView2 依赖解包到 `%LOCALAPPDATA%\LLMTranslation\` |
 | `dist\TestTarget.exe` | - | 仅测试用，不用分发 |
-
-手动部署示例（管理员或普通用户均可，写入当前用户目录）：
-
-```powershell
-mkdir "$env:LOCALAPPDATA\Programs\LLMTranslation" -Force
-copy dist\LLMTranslation.exe "$env:LOCALAPPDATA\Programs\LLMTranslation\LLMTranslation.exe"
-```
 
 卸载：直接删除程序目录即可（`%LOCALAPPDATA%\LLMTranslation` 里的设置与 WebView2 缓存保留，重装沿用）。
 
