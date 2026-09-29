@@ -437,14 +437,16 @@ namespace LLMTranslation
             if (d.Port != null) _cfg.Port = d.Port;
             if (d.Model != null) _cfg.Model = d.Model;
             if (d.ApiKey != null) _cfg.ApiKey = d.ApiKey;
-            if (d.Prompt != null) _cfg.Prompt = d.Prompt;
+            // 仅影响译文结果的字段变更才需要重译; 字体大小/划词开关改了不必重跑
+            bool affectTranslation = false;
+            if (d.Prompt != null && d.Prompt != _cfg.Prompt) { _cfg.Prompt = d.Prompt; affectTranslation = true; }
             if (d.FontSize >= 10 && d.FontSize <= 28) _cfg.FontSize = d.FontSize;
-            _cfg.EnableThinking = d.EnableThinking;
+            if (d.EnableThinking != _cfg.EnableThinking) { _cfg.EnableThinking = d.EnableThinking; affectTranslation = true; }
             _cfg.EnableSelection = d.EnableSelection;
             _cfg.Save();
             PushFont(); PushInit();
             if (ConfigChanged != null) ConfigChanged();
-            Retranslate();
+            if (affectTranslation) Retranslate();
         }
 
         private void PushFont()
