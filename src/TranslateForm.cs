@@ -48,8 +48,6 @@ namespace LLMTranslation
         private Rectangle _startRect;
         private Point _dragStart;
 
-        public bool DragActive { get { return _edgeResizing; } }
-
         public static string LangName(string code)
         {
             if (code == "zh") return "简体中文";
@@ -189,16 +187,6 @@ namespace LLMTranslation
             crnBL.Bounds = new Rectangle(0, H - 10, 10, 10);
             crnBR.Bounds = new Rectangle(W - 10, H - 10, 10, 10);
             toast.Location = new Point((ClientSize.Width - toast.Width) / 2, ClientSize.Height - toast.Height - 14);
-            ApplyRoundRegion();
-        }
-
-        private void ApplyRoundRegion()
-        {
-            if (_edgeResizing) return;   // 拖动中保持直角 (BeginEdgeResize 已解除 Region), 松手后恢复
-            using (GraphicsPath path = FloatingButtonForm.RoundRect(new Rectangle(0, 0, Width, Height), 12))
-            {
-                this.Region = new Region(path);
-            }
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -218,6 +206,7 @@ namespace LLMTranslation
             // FormBorderStyle=None 时 WinForms 不会把 Form.Icon 发到窗口 (跳过/清空 WM_SETICON),
             // 任务栏按钮只能回退到 exe 默认图标。手动补发三种尺寸槽位, 强制用托盘同款"译"图标 (OnShown 再补一次防 UpdateIcon 清空)。
             ApplyWindowIcon();
+            NativeMethods.ApplyFluentRound(this.Handle);   // DWM 原生圆角 (替代手动 Region: 平滑抗锯齿 + 缩放无滞后闪烁)
             WinLog.Window("translate-handle", this);
         }
 
@@ -254,27 +243,7 @@ namespace LLMTranslation
             base.WndProc(ref m);
         }
 
-        // ---- 钩子驱动的边缘缩放 / 分隔条拖动 ----
-        public int EdgeMaskAt(Point p)
-        {
-            Rectangle r = this.Bounds;
-            const int b = 6, k = 10;   // k = 角落覆盖层边长, 与 LayoutCustom 的 10×10 保持一致
-            bool near = p.X >= r.X - 2 && p.X <= r.Right + 1 && p.Y >= r.Y - 2 && p.Y <= r.Bottom + 1;
-            if (!near) return 0;
-            // 角落 10×10 内一律双向 mask: 钩子先于面板 MouseDown 生效并 SetCapture,
-            // 若沿用 6px 带判定, 角区超出 6px 的部分会只显示斜向光标却单向缩放
-            bool l = p.X <= r.X + k, rt = p.X >= r.Right - k, t = p.Y <= r.Y + k, bt = p.Y >= r.Bottom - k;
-            if (l && t) return 5;    // TL = 左|上
-            if (rt && t) return 6;   // TR = 右|上
-            if (l && bt) return 9;   // BL = 左|下
-            if (rt && bt) return 10; // BR = 右|下
-            int mask = 0;
-            if (p.X <= r.X + b) mask |= 1;
-            if (p.X >= r.Right - b) mask |= 2;
-            if (p.Y <= r.Y + b) mask |= 4;
-            if (p.Y >= r.Bottom - b) mask |= 8;
-            return mask;
-        }
+        // ---- 面板驱动的边缘缩放 (MouseDown 起, WndProc 逐帧合并驱动) ----
 
         public void BeginEdgeResize(int mask)
         {
@@ -282,9 +251,6 @@ namespace LLMTranslation
             _edgeResizing = true;
             _startRect = this.Bounds;
             _dragStart = Cursor.Position;
-            // 圆角 Region 是"窗口先变大、SetWindowRgn 后到": 每步新暴露的边带短暂落在旧 Region 外,
-            // 透出桌面形成闪烁带。拖动期间解除 Region 保持直角, EndDrag 恢复圆角。
-            this.Region = null;
             NativeMethods.SetCapture(this.Handle);   // 捕获鼠标, 移动/抬起在 WndProc 处理, 不受子窗口影响
         }
 
@@ -301,14 +267,13 @@ namespace LLMTranslation
                 if ((_edgeMask & 8) != 0) { r.Height = _startRect.Height + dy; }
                 if (r.Width < MinimumSize.Width) { if ((_edgeMask & 1) != 0) r.X = r.Right - MinimumSize.Width; r.Width = MinimumSize.Width; }
                 if (r.Height < MinimumSize.Height) { if ((_edgeMask & 4) != 0) r.Y = r.Bottom - MinimumSize.Height; r.Height = MinimumSize.Height; }
-                this.Bounds = r;
+                if (r != this.Bounds) this.Bounds = r;   // 只在真正变化时提交, 避免冗余 SetWindowPos
             }
         }
 
         public void EndDrag()
         {
             _edgeResizing = false;
-            ApplyRoundRegion();   // 松手恢复圆角裁剪
             NativeMethods.ReleaseCapture();
         }
 

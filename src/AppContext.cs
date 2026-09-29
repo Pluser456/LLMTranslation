@@ -331,17 +331,10 @@ namespace LLMTranslation
                 int msg = (int)wParam;
                 NativeMethods.MSLLHOOKSTRUCT info = (NativeMethods.MSLLHOOKSTRUCT)Marshal.PtrToStructure(lParam, typeof(NativeMethods.MSLLHOOKSTRUCT));
                 Point pt = new Point(info.pt.x, info.pt.y);
-                if (msg == 0x0200) // WM_MOUSEMOVE: 驱动边缘缩放/分隔条
+                if (msg == NativeMethods.WM_LBUTTONDOWN)
                 {
-                    if (_translate != null && _translate.DragActive) _translate.UpdateDrag(pt);
-                }
-                else if (msg == NativeMethods.WM_LBUTTONDOWN)
-                {
-                    if (_translate != null && _translate.Visible && !(_dialog != null && _dialog.Bounds.Contains(pt)))
-                    {
-                        int em = _translate.EdgeMaskAt(pt);
-                        if (em != 0) _translate.BeginEdgeResize(em);
-                    }
+                    // 边缘缩放完全交给窗体自身 (面板 MouseDown → SetCapture → WndProc 逐帧合并驱动),
+                    // 钩子不再介入, 避免与 WndProc 双写 Bounds 造成高 DPI 下每帧来回跳
                     _downPoint = pt;
                     _isDown = true;
                     Log("LBDN pt=" + pt + " inCap=" + (_floating != null && _floating.Bounds.Contains(pt)));
@@ -370,15 +363,14 @@ namespace LLMTranslation
                 }
                 else if (msg == NativeMethods.WM_LBUTTONUP)
                 {
-                    bool wasDrag = _translate != null && _translate.DragActive;
-                    if (wasDrag) _translate.EndDrag();
                     bool moved = _isDown && (Math.Abs(pt.X - _downPoint.X) > 8 || Math.Abs(pt.Y - _downPoint.Y) > 8);
                     // 低级钩子拿不到注入点击的 DBLCLK, 自行按 时间+距离 判定双击
                     int now = Environment.TickCount;
-                    bool dbl = _dblClick || (!moved && !wasDrag && unchecked(now - _lastUpTick) < 500 &&
+                    bool dbl = _dblClick || (!moved && unchecked(now - _lastUpTick) < 500 &&
                         Math.Abs(pt.X - _lastUpPoint.X) < 10 && Math.Abs(pt.Y - _lastUpPoint.Y) < 10);
-                    // 按下处在自己窗口 (标题栏拖动/边缘/分隔条/自己 UI) 一律不取词; 原生标题栏拖动不经过 DragActive 标志, 必须靠这里拦
-                    bool sched = !_downOnOwn && !wasDrag && (moved || dbl);
+                    // 按下处在自己窗口 (标题栏拖动/边缘缩放/自己 UI) 一律不取词; 缩放/拖动循环不经过
+                    // 应用层标志, 靠按下时的 _downOnOwn 拦
+                    bool sched = !_downOnOwn && (moved || dbl);
                     AppContext.Log("LBUP moved=" + moved + " dbl=" + dbl + " own=" + _downOnOwn + " schedule=" + sched);
                     if (sched)
                     {

@@ -109,13 +109,6 @@ namespace LLMTranslation
             crnTR.Bounds = new Rectangle(W - 10, 0, 10, 10);
             crnBL.Bounds = new Rectangle(0, H - 10, 10, 10);
             crnBR.Bounds = new Rectangle(W - 10, H - 10, 10, 10);
-            if (!_edgeResizing)
-            {
-                using (GraphicsPath path = FloatingButtonForm.RoundRect(new Rectangle(0, 0, Width, Height), 12))
-                {
-                    this.Region = new Region(path);   // 圆角随尺寸重建 (拖动中保持直角, 松手后恢复)
-                }
-            }
         }
 
         protected override void WndProc(ref Message m)
@@ -132,8 +125,6 @@ namespace LLMTranslation
             _edgeResizing = true;
             _startRect = this.Bounds;
             _dragStart = Cursor.Position;
-            // 同 TranslateForm: 拖动期间解除圆角 Region, 避免"窗口先变大、Region 后到"的透明闪烁带
-            this.Region = null;
             NativeMethods.SetCapture(this.Handle);
         }
 
@@ -148,13 +139,13 @@ namespace LLMTranslation
             if ((_edgeMask & 8) != 0) { r.Height = _startRect.Height + dy; }
             if (r.Width < MinimumSize.Width) { if ((_edgeMask & 1) != 0) r.X = r.Right - MinimumSize.Width; r.Width = MinimumSize.Width; }
             if (r.Height < MinimumSize.Height) { if ((_edgeMask & 4) != 0) r.Y = r.Bottom - MinimumSize.Height; r.Height = MinimumSize.Height; }
-            this.Bounds = r;
+            if (r != this.Bounds) this.Bounds = r;   // 只在真正变化时提交, 避免冗余 SetWindowPos
         }
 
         private void EndDrag()
         {
             _edgeResizing = false;
-            LayoutEdges();   // 松手恢复圆角裁剪
+            LayoutEdges();   // 重新排布边缘面板
             NativeMethods.ReleaseCapture();
         }
 
@@ -177,6 +168,7 @@ namespace LLMTranslation
         {
             base.OnHandleCreated(e);
             ApplyWindowIcon();
+            NativeMethods.ApplyFluentRound(this.Handle);   // DWM 原生圆角 (无边框窗不会自动圆, 需显式请求)
             WinLog.Window("settings-handle", this);
         }
 
